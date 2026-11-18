@@ -27,11 +27,7 @@
     .beta { background: rgba(255,42,95,0.2); color: var(--red); font-size: 0.6rem; padding: 2px 5px; border-radius: 4px; font-weight: 800; }
     .prof-card { display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 14px; cursor: pointer; }
     .av { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #00ff88, #ff2a5f); color: #040706; font-weight: 900; display: grid; place-items: center; flex-shrink: 0; }
-    .nav-btn {
-      width: 100%; background: transparent; border: none; color: var(--muted);
-      padding: 8px 10px; border-radius: 8px; text-align: left; cursor: pointer;
-      font-size: 0.85rem; margin-bottom: 2px; display: flex; justify-content: space-between; align-items: center;
-    }
+    .nav-btn { width: 100%; background: transparent; border: none; color: var(--muted); padding: 8px 10px; border-radius: 8px; text-align: left; cursor: pointer; font-size: 0.85rem; margin-bottom: 2px; display: flex; justify-content: space-between; align-items: center; }
     .nav-btn:hover, .nav-btn.active { background: rgba(0,255,136,0.14); color: var(--green); font-weight: 700; }
     .nav-sub { padding-left: 24px; font-size: 0.8rem; }
     .main { flex: 1; padding: 18px 24px; overflow-x: hidden; }
@@ -66,7 +62,6 @@
 </head>
 <body>
 <div class="app">
-  <!-- Scrollable Left Sidebar -->
   <aside class="sidebar">
     <div class="logo"><span class="badge">P2PFB</span> P2P <span style="color:var(--green);">FX</span> <span style="color:var(--red);">Terminal</span> <span class="beta">BETA</span></div>
 
@@ -105,23 +100,21 @@
     </div>
   </aside>
 
-  <!-- Main Workspace -->
   <main class="main">
     <div class="topbar">
       <div>
         <h2 id="viewTitle" style="margin:0; font-size:1.3rem;">Dashboard</h2>
-        <small id="todayDate" style="color:var(--muted);">Wed, Nov 18, 2026</small>
+        <small id="todayDate" style="color:var(--muted);">Loading live date...</small>
       </div>
       <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-        <input type="text" placeholder="Search... (Ctrl+K)" style="width:170px; margin:0; padding:6px 10px; font-size:0.8rem;" onkeyup="if(event.key==='Enter') go('trades')">
-        <button class="btn-o" onclick="document.body.classList.toggle('light')" title="Toggle Theme">☀ / ☾</button>
+        <input type="text" placeholder="Search... (Ctrl+K)" style="width:165px; margin:0; padding:6px 10px; font-size:0.8rem;" onkeyup="if(event.key==='Enter') go('trades')">
+        <button class="btn-o" onclick="document.body.classList.toggle('light')" title="Switch Theme">☀ / ☾</button>
         <button class="btn-g" onclick="document.getElementById('tradeDlg').showModal()">+ Add Trade</button>
-        <span id="clock" class="tag-g" style="font-family:monospace; font-size:0.84rem; padding:6px 10px;">00:00:00</span>
+        <span id="clock" class="tag-g" style="font-family:monospace; font-size:0.84rem; padding:6px 10px;">--:--:--</span>
         <div class="av" id="topAv" style="cursor:pointer;" onclick="go('settings')">M</div>
       </div>
     </div>
-
-    <!-- 1. DASHBOARD VIEW (MATCHING SCREENSHOTS) -->
+    <!-- 1. DASHBOARD VIEW -->
     <section id="v-dashboard" class="view active">
       <div class="g4">
         <div class="card"><small style="color:var(--muted);">TOTAL P&L</small><h2 id="kTotal" class="win" style="margin:6px 0 2px;">+$0.00</h2><small id="kCount" style="color:var(--muted);">→ 0 trades</small></div>
@@ -130,7 +123,6 @@
         <div class="card"><small style="color:var(--muted);">WIN RATE</small><h2 id="kWin" style="margin:6px 0 6px;">0%</h2><div style="height:6px;background:var(--bg);border-radius:99px;overflow:hidden;"><div id="kBar" style="height:100%;width:0%;background:var(--green);"></div></div></div>
       </div>
 
-      <!-- Performance Chart Card -->
       <div class="card">
         <div class="card-h">
           <div><span>Performance</span> <strong id="perfPnl" class="win" style="margin-left:8px;">+$0.00</strong></div>
@@ -145,13 +137,10 @@
         <canvas id="eqCanvas" width="800" height="160" style="width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px;"></canvas>
       </div>
 
-      <!-- Monthly P&L Calendar with 8th Weekly Column -->
       <div class="card">
         <div class="card-h">
           <div><span>Monthly P&L Calendar</span> <span style="margin-left:10px; font-size:0.82rem; color:var(--muted);">Monthly: <strong id="calMonthPnl" class="win">+$0.00</strong></span></div>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <input type="month" id="calPicker" value="2026-11" onchange="renderCal()" style="width:auto; margin:0; padding:4px 8px; font-size:0.8rem;">
-          </div>
+          <input type="month" id="calPicker" value="2026-11" onchange="renderCal()" style="width:auto; margin:0; padding:4px 8px; font-size:0.8rem;">
         </div>
         <div class="cal-8" id="calGrid"></div>
         <div style="display:flex; gap:16px; margin-top:10px; font-size:0.75rem; color:var(--muted);">
@@ -160,7 +149,6 @@
         </div>
       </div>
 
-      <!-- Open Positions & Recent Activity -->
       <div class="g2">
         <div class="card">
           <div class="card-h"><span>Open Positions</span><button class="btn-o" style="padding:4px 10px; font-size:0.75rem;" onclick="go('trades')">View All Positions →</button></div>
@@ -172,7 +160,6 @@
         </div>
       </div>
 
-      <!-- Top Performers & Quick Stats -->
       <div class="g2">
         <div class="card">
           <div class="card-h"><span>Top Performers</span></div>
@@ -224,7 +211,7 @@
       </div>
     </section>
 
-    <!-- 4A. PERFORMANCE ANALYTICS (26-METRIC STATS TABLE) -->
+    <!-- 4A. PERFORMANCE ANALYTICS -->
     <section id="v-perf" class="view">
       <div class="g4">
         <div class="card"><small style="color:var(--muted);">TOTAL P&L</small><h2 id="pTotal" class="win" style="margin:6px 0 0;">+$0.00</h2></div>
@@ -232,14 +219,8 @@
         <div class="card"><small style="color:var(--muted);">PROFIT FACTOR</small><h2 id="pPf" style="margin:6px 0 0;">0.00</h2></div>
         <div class="card"><small style="color:var(--muted);">EXPECTANCY</small><h2 id="pExp" style="margin:6px 0 0;">+$0.00</h2></div>
       </div>
-
       <div class="card">
-        <div class="card-h"><span>Your Stats (Comprehensive Breakdown)</span><span class="tag-g">All Time</span></div>
-        <div class="g3" style="margin-bottom:14px;">
-          <div class="mini"><small>BEST MONTH</small><strong id="stBestMo" class="win">+$0.00</strong></div>
-          <div class="mini"><small>WORST MONTH</small><strong id="stWorstMo" class="loss">-$0.00</strong></div>
-          <div class="mini"><small>AVERAGE PER MONTH</small><strong id="stAvgMo">$0.00</strong></div>
-        </div>
+        <div class="card-h"><span>Your Stats</span><span class="tag-g">All Time</span></div>
         <div class="g2">
           <table>
             <tbody>
@@ -248,29 +229,15 @@
               <tr><td>Average Winning Trade</td><td id="s3" class="win">$0.00</td></tr>
               <tr><td>Average Losing Trade</td><td id="s4" class="loss">$0.00</td></tr>
               <tr><td>Total Number of Trades</td><td id="s5">0</td></tr>
-              <tr><td>Number of Winning Trades</td><td id="s6" class="win">0</td></tr>
-              <tr><td>Number of Losing Trades</td><td id="s7" class="loss">0</td></tr>
-              <tr><td>Number of Break Even Trades</td><td id="s8">0</td></tr>
-              <tr><td>Max Consecutive Wins</td><td id="s9">0</td></tr>
-              <tr><td>Max Consecutive Losses</td><td id="s10">0</td></tr>
-              <tr><td>Total Commissions</td><td>$0.00</td></tr>
-              <tr><td>Total Swap</td><td>$0.00</td></tr>
-              <tr><td>Largest Profit</td><td id="s13" class="win">$0.00</td></tr>
+              <tr><td>Winning Trades</td><td id="s6" class="win">0</td></tr>
+              <tr><td>Losing Trades</td><td id="s7" class="loss">0</td></tr>
             </tbody>
           </table>
           <table>
             <tbody>
+              <tr><td>Largest Profit</td><td id="s13" class="win">$0.00</td></tr>
               <tr><td>Largest Loss</td><td id="s14" class="loss">$0.00</td></tr>
-              <tr><td>Average Hold Time (All)</td><td>2h 15m</td></tr>
-              <tr><td>Average Hold Time (Winning)</td><td>2h 40m</td></tr>
-              <tr><td>Average Hold Time (Losing)</td><td>1h 35m</td></tr>
-              <tr><td>Average Hold Time (Scratch)</td><td>0h 25m</td></tr>
-              <tr><td>Average Daily P&L</td><td id="s19">$0.00</td></tr>
-              <tr><td>Average Daily Win</td><td id="s20" class="win">$0.00</td></tr>
-              <tr><td>Average Daily Loss</td><td id="s21" class="loss">$0.00</td></tr>
-              <tr><td>Winning Days</td><td id="s22" class="win">0</td></tr>
-              <tr><td>Losing Days</td><td id="s23" class="loss">0</td></tr>
-              <tr><td>Breakeven Days</td><td>0</td></tr>
+              <tr><td>Average Hold Time</td><td>2h 15m</td></tr>
               <tr><td>Trade Expectancy</td><td id="s25">$0.00</td></tr>
               <tr><td>Profit Factor / Max Drawdown</td><td id="s26">0.00 / $0.00</td></tr>
             </tbody>
@@ -319,13 +286,13 @@
           <span>AI-Powered Performance Report</span>
           <span id="aiBadge" class="tag-g">7-Day Free Trial</span>
         </div>
-        <p style="color:var(--muted); font-size:0.86rem;">Our AI scans your logged trades for win rate, symbol edge, and FOMO/Revenge leaks. Free for your first 7 days.</p>
+        <p style="color:var(--muted); font-size:0.86rem;">Scans your logged trades for win rate, symbol edge, and FOMO/Revenge leaks. Free for your first 7 days.</p>
         <button class="btn-g" onclick="runAi()">🤖 Generate My AI Report</button>
         <div id="aiOut" style="margin-top:14px;"></div>
       </div>
     </section>
 
-    <!-- 7. BACKTESTING (TRADINGVIEW BAR REPLAY — FREE FOR 7 DAYS) -->
+    <!-- 7. BACKTESTING (BAR REPLAY — FREE FOR 7 DAYS) -->
     <section id="v-backtest" class="view">
       <div class="card">
         <div class="card-h">
@@ -344,7 +311,6 @@
         <canvas id="btCvs" width="800" height="230" style="width:100%; background:var(--bg); border:1px solid var(--border); border-radius:10px;"></canvas>
       </div>
     </section>
-
     <!-- 8. TRADERS LOUNGE -->
     <section id="v-lounge" class="view">
       <div class="card">
@@ -374,7 +340,7 @@
       </div>
     </section>
 
-    <!-- 10. TOOLS HUB (POSITION CALCULATOR, FOREX MARKET HOURS & TRADER POV) -->
+    <!-- 10. TOOLS HUB -->
     <section id="v-tools" class="view">
       <div class="g2">
         <div class="card">
@@ -421,7 +387,7 @@
         </div>
       </div>
     </section>
-    <!-- 11. SETTINGS (5 SUB-TABS) -->
+    <!-- 11. SETTINGS -->
     <section id="v-settings" class="view">
       <div class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
         <div style="display:flex; align-items:center; gap:12px;">
@@ -464,7 +430,7 @@
 
       <div id="st-bill" class="st-pane card" style="display:none;">
         <h4 style="margin-top:0;">Billing & Active Plan</h4>
-        <p id="billDesc" style="color:var(--muted);">FREE Plan + 7-Day Pro/Elite Free Trial active.</p>
+        <p style="color:var(--muted);">FREE Plan + 7-Day Pro/Elite Free Trial active.</p>
         <button class="btn-g" onclick="go('sub')">View Upgrade Plans</button>
       </div>
 
@@ -475,7 +441,7 @@
       </div>
     </section>
 
-    <!-- 12. HELP & SUPPORT (ALL 11 FAQS) -->
+    <!-- 12. HELP & SUPPORT -->
     <section id="v-help" class="view">
       <div class="card">
         <div class="card-h"><span>Contact P2P FX Terminal Support</span><span class="tag-g">● All Systems Operational</span></div>
@@ -523,13 +489,11 @@
   </main>
 </div>
 
-<!-- Bottom Economic News Ticker -->
 <div class="ticker">
   <span class="tag-r">NEWS</span>
   <marquee scrollamount="5">🔴 USD Core CPI (MoM) 0.3% &nbsp;•&nbsp; 🟡 EUR ECB Policy Statement &nbsp;•&nbsp; 🔴 XAUUSD Gold breaks London high &nbsp;•&nbsp; 🟢 GBP UK CPI 2.6% YoY</marquee>
 </div>
 
-<!-- + Add Trade Modal -->
 <dialog id="tradeDlg">
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
     <strong>+ Add Trade</strong>
@@ -546,13 +510,6 @@
       <div><small>MARKET</small><select id="tMkt"><option>Forex</option><option>Stocks</option><option>F&O</option><option>Crypto</option></select></div>
       <div><small>EMOTION</small><select id="tEmo"><option>Disciplined</option><option>FOMO</option><option>Revenge</option><option>Hesitant</option></select></div>
     </div>
-    <details style="margin:10px 0; padding:8px; background:var(--bg); border:1px solid var(--border); border-radius:8px; font-size:0.8rem;">
-      <summary style="cursor:pointer;">› Pre-Trade Checklist (Optional)</summary>
-      <div style="margin-top:6px; color:var(--muted);">
-        <label><input type="checkbox" checked style="width:auto;"> Higher timeframe bias confirmed</label><br>
-        <label><input type="checkbox" checked style="width:auto;"> Stop-loss placed (Max 1-2% risk)</label>
-      </div>
-    </details>
     <small>NOTES</small><textarea id="tNot" rows="2" placeholder="Setup rationale & lessons..."></textarea>
     <button type="submit" class="btn-g" style="width:100%; margin-top:12px;">Save Trade</button>
   </form>
@@ -562,30 +519,40 @@
   if (!rawSess) window.location.replace('auth.html');
   const user = JSON.parse(rawSess || '{}');
 
-  let trades = JSON.parse(localStorage.getItem('p2p_fx_terminal_trades')) || [];
-  let ideas = JSON.parse(localStorage.getItem('p2p_fx_ideas')) || [
+  let trades = JSON.parse(localStorage.getItem('p2p_fx_terminal_trades')) || new Array();
+  let ideas = JSON.parse(localStorage.getItem('p2p_fx_ideas')) || new Array(
     { user: 'Shafee (Admin)', text: 'XAUUSD LONG — Holding London VWAP support, targeting NY session liquidity sweep.' },
     { user: 'Atal Shendge', text: 'EURUSD SHORT — Clean 4H supply rejection during London/NY overlap.' }
-  ];
+  );
 
   const daysUsed = (Date.now() - new Date(user.createdAt || Date.now()).getTime()) / 86400000;
   const daysLeft = Math.max(0, Math.ceil(7 - daysUsed));
   const isPro = daysLeft > 0;
 
   const initChar = (user.name || 'M').charAt(0).toUpperCase();
-  ['sideAv', 'topAv', 'setAv'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = initChar; });
-  ['sideName', 'setFullName'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = user.name || 'Trader'; });
+  new Array('sideAv', 'topAv', 'setAv').forEach(id => { const el = document.getElementById(id); if (el) el.textContent = initChar; });
+  new Array('sideName', 'setFullName').forEach(id => { const el = document.getElementById(id); if (el) el.textContent = user.name || 'Trader'; });
   document.getElementById('setEmail').textContent = user.email || '';
   document.getElementById('myPovCode').value = 'VIEW-' + Math.abs((user.email || 'P2PFX').split('').reduce((a, b) => a + b.charCodeAt(0), 100000)).toString().slice(0, 6);
   document.getElementById('trialTag').textContent = isPro ? `${daysLeft}D FREE TRIAL` : 'FREE PLAN';
   document.getElementById('aiBadge').textContent = isPro ? `7-Day Free Trial (${daysLeft}d left)` : 'Trial Expired — Upgrade';
   document.getElementById('btBadge').textContent = isPro ? `7-Day Free Trial (${daysLeft}d left)` : 'Trial Expired — Upgrade';
   document.getElementById('tDat').valueAsDate = new Date();
-  setInterval(() => { document.getElementById('clock').textContent = new Date().toLocaleTimeString(); }, 1000);
+
+  function updateLiveDateTime() {
+    const now = new Date();
+    const dateEl = document.getElementById('todayDate');
+    const clockEl = document.getElementById('clock');
+    if (dateEl) dateEl.textContent = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    if (clockEl) clockEl.textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+  updateLiveDateTime();
+  setInterval(updateLiveDateTime, 1000);
 
   function go(id, btn) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById('v-' + id).classList.add('active');
+    const target = document.getElementById('v-' + id);
+    if (target) target.classList.add('active');
     if (btn) {
       document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
@@ -599,7 +566,6 @@
     localStorage.removeItem('p2p_fx_session');
     window.location.href = 'auth.html';
   }
-
   document.getElementById('tForm').addEventListener('submit', e => {
     e.preventDefault();
     const side = document.getElementById('tSide').value;
@@ -677,6 +643,7 @@
     renderLounge();
     renderLb();
   }
+
   function openJ(id) {
     const t = trades.find(x => x.id === id);
     if (!t) return;
@@ -694,7 +661,9 @@
     ctx.clearRect(0, 0, c.width, c.height);
     if (!closed.length) { ctx.fillStyle = '#94a3b8'; ctx.font = '14px sans-serif'; ctx.fillText('No closed trades yet — log a trade to see your equity curve', 230, 85); return; }
     let run = 0;
-    const pts = [0].concat([...closed].reverse().map(t => (run += t.pnl)));
+    const pts = new Array(0);
+    pts.push(0);
+    closed.slice().reverse().forEach(t => { run += t.pnl; pts.push(run); });
     const min = Math.min(...pts) - 10, max = Math.max(...pts) + 10;
     ctx.strokeStyle = run >= 0 ? '#00ff88' : '#ff2a5f';
     ctx.lineWidth = 3;
@@ -709,7 +678,8 @@
 
   function renderCal() {
     const ym = document.getElementById('calPicker').value || '2026-11';
-    const [y, m] = ym.split('-').map(Number);
+    const parts = ym.split('-').map(Number);
+    const y = parts.at(0), m = parts.at(1);
     const days = new Date(y, m, 0).getDate();
     const start = (new Date(y, m - 1, 1).getDay() + 6) % 7;
     const byDay = {};
@@ -717,7 +687,7 @@
     trades.forEach(t => { if (t.dat.startsWith(ym) && !t.open) { byDay[t.dat] = (byDay[t.dat] || 0) + t.pnl; mTotal += t.pnl; } });
     document.getElementById('calMonthPnl').textContent = (mTotal >= 0 ? '+$' : '-$') + Math.abs(mTotal).toFixed(2);
 
-    const heads = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Weekly'].map(h => `<small style="color:var(--muted);font-weight:700;">${h}</small>`).join('');
+    const heads = new Array('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Weekly').map(h => `<small style="color:var(--muted);font-weight:700;">${h}</small>`).join('');
     let cells = '', wkSum = 0, wkDays = 0, col = 0;
     for (let i = 0; i < start; i++) { cells += '<div class="c-cell"></div>'; col++; }
     for (let d = 1; d <= days; d++) {
@@ -729,21 +699,19 @@
       col++;
       if (col === 7 || d === days) {
         while (col < 7) { cells += '<div class="c-cell"></div>'; col++; }
-        cells += `<div class="c-wk"><small style="color:var(--muted);">WEEKLY</small><strong class="${wkSum>=0?'win':'loss'}">$${wkSum.toFixed(0)}</strong><small style="color:var(--muted);">${wkDays}d</small></div>`;
-        col = 0; wkSum = 0; wkDays = 0;
-      }
-    }
-    document.getElementById('calGrid').innerHTML = heads + cells;
-  }
-
-  function renderCalEvents() {
+cells += <div class="c-wk"><small style="color:var(--muted);">WEEKLY</small><strong class="${wkSum>=0?'win':'loss'}">$${wkSum.toFixed(0)}</strong><small style="color:var(--muted);">${wkDays}d</small></div>;
+col = 0; wkSum = 0; wkDays = 0;
+}
+}
+document.getElementById('calGrid').innerHTML = heads + cells;
+} function renderCalEvents() {
     const f = document.getElementById('calImpact').value;
-    const evs = [
+    const evs = new Array(
       { t: '10:00', c: '🇮🇳 INR', i: 'MED', e: 'RBI Liquidity & Rate Guidance', a: '6.50%', fo: '6.50%', p: '6.50%' },
       { t: '13:30', c: '🇬🇧 GBP', i: 'HIGH', e: 'CPI (YoY)', a: '2.6%', fo: '2.5%', p: '2.3%' },
       { t: '18:00', c: '🇺🇸 USD', i: 'HIGH', e: 'Core Retail Sales (MoM)', a: '—', fo: '0.3%', p: '0.4%' },
       { t: '19:30', c: '🇺🇸 USD', i: 'HIGH', e: 'FOMC Member Speech & Crude Inventories', a: '—', fo: '-1.2M', p: '2.1M' }
-    ].filter(x => f === 'ALL' || x.i === f);
+    ).filter(x => f === 'ALL' || x.i === f);
     document.getElementById('econBody').innerHTML = evs.map(x => `<tr><td>${x.t}</td><td><strong>${x.c}</strong></td><td><span class="${x.i==='HIGH'?'tag-r':'tag-g'}">${x.i}</span></td><td>${x.e}</td><td>${x.a}</td><td>${x.fo}</td><td>${x.p}</td></tr>`).join('');
   }
 
@@ -753,21 +721,25 @@
     document.getElementById('aiOut').innerHTML = `<div class="mini" style="border-color:var(--green);"><strong>AI Coach Diagnosis:</strong> Analyzed ${trades.length} trades. Detected <strong>${fomo}</strong> emotional (FOMO/Revenge) entries. Keep risk under 2% per trade and stick to London/NY overlap!</div>`;
   }
 
-  let btTimer = null, btBars =, btPos = null, btNet = 0;
+  let btTimer = null;
+  let btBars = new Array(2640.5, 2642.0, 2639.8, 2644.2, 2646.5, 2645.1, 2648.9);
+  let btPos = null, btNet = 0;
+
   function togglePlay() { if (!isPro) { go('sub'); return; } if (btTimer) { clearInterval(btTimer); btTimer = null; } else btTimer = setInterval(stepBar, 800); }
   function stepBar() {
     if (!isPro) { go('sub'); return; }
-    btBars.push(+(btBars[btBars.length - 1] + (Math.random() - 0.48) * 3.5).toFixed(2));
+    const last = btBars.at(-1);
+    btBars.push(+(last + (Math.random() - 0.48) * 3.5).toFixed(2));
     if (btBars.length > 26) btBars.shift();
     drawBt();
   }
-  function resetBt() { btBars =; btPos = null; btNet = 0; document.getElementById('btPnl').textContent = '+$0.00'; drawBt(); }
+  function resetBt() { btBars = new Array(2640.5, 2642.0, 2639.8, 2644.2, 2646.5, 2645.1, 2648.9); btPos = null; btNet = 0; document.getElementById('btPnl').textContent = '+$0.00'; drawBt(); }
   function drawBt() {
     const c = document.getElementById('btCvs'), ctx = c.getContext('2d');
     ctx.clearRect(0, 0, c.width, c.height);
     const min = Math.min(...btBars) - 2, max = Math.max(...btBars) + 2, w = c.width / btBars.length;
     btBars.forEach((v, i) => {
-      const p = i ? btBars[i - 1] : v;
+      const p = i > 0 ? btBars.at(i - 1) : v;
       ctx.fillStyle = v >= p ? '#00ff88' : '#ff2a5f';
       const y1 = c.height - ((v - min) / (max - min)) * (c.height - 20) - 10;
       const y2 = c.height - ((p - min) / (max - min)) * (c.height - 20) - 10;
@@ -776,7 +748,7 @@
   }
   function btOrder(dir) {
     if (!isPro) { go('sub'); return; }
-    const px = btBars[btBars.length - 1];
+    const px = btBars.at(-1);
     if (!btPos) { btPos = { dir, px }; alert(`Backtest ${dir} opened @ ${px}`); }
     else { btNet += btPos.dir === 'BUY' ? (px - btPos.px) * 100 : (btPos.px - px) * 100; btPos = null; document.getElementById('btPnl').textContent = (btNet >= 0 ? '+$' : '-$') + Math.abs(btNet).toFixed(2); }
   }
@@ -797,12 +769,12 @@
   function renderLb() {
     const m = { day: 0.25, week: 1, month: 3.8, year: 14 }[document.getElementById('lbPeriod').value];
     const myNet = trades.filter(t => !t.open).reduce((s, t) => s + t.pnl, 0);
-    const list = [
-      { n: 'Atal Shendge', p: 398.5 * m, w: '71%' },
-      { n: 'Atul', p: 171.8 * m, w: '66%' },
-      { n: 'Sukhpal Singh', p: 148.2 * m, w: '64%' },
-      { n: user.name || 'You', p: myNet, w: '—' }
-    ].sort((a, b) => b.p - a.p);
+    const list = new Array(
+      { n: 'Atal Shendge', p: 398.5 * m },
+      { n: 'Atul', p: 171.8 * m },
+      { n: 'Sukhpal Singh', p: 148.2 * m },
+      { n: user.name || 'You', p: myNet }
+    ).sort((a, b) => b.p - a.p);
     document.getElementById('lbPodium').innerHTML = list.slice(0, 3).map((x, i) => `<div class="mini" style="${i===0?'border-color:var(--green);':''}"><small>#${i+1} PLACE</small><strong>${x.n}</strong><div class="win">$${x.p.toFixed(2)}</div></div>`).join('');
     document.getElementById('lbList').innerHTML = list.map((x, i) => `<div style="display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid var(--border);"><span>#${i+1} <strong>${x.n}</strong></span><span class="${x.p>=0?'win':'loss'}">$${x.p.toFixed(2)}</span></div>`).join('');
   }
@@ -828,11 +800,15 @@
   }
 
   function exportCsv() {
-    const rows = ['Date,Symbol,Side,Entry,Exit,Lots,PnL'].concat(trades.map(t => `${t.dat},${t.sym},${t.side},${t.ent},${t.open?'OPEN':t.ext},${t.lot},${t.pnl.toFixed(2)}`));
+    const rows = new Array('Date,Symbol,Side,Entry,Exit,Lots,PnL').concat(trades.map(t => `${t.dat},${t.sym},${t.side},${t.ent},${t.open?'OPEN':t.ext},${t.lot},${t.pnl.toFixed(2)}`));
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv' }));
-a.download = 'p2p-fx-terminal-trades.csv';
-a.click();
-}
-drawBt();
-renderAll();
+    a.download = 'p2p-fx-terminal-trades.csv';
+    a.click();
+  }
+
+  drawBt();
+  renderAll();
+</script>
+</body>
+  </html>
