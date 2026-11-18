@@ -4,979 +4,121 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>P2P FX Terminal — Track Trades. Analyze PnL. Master Markets.</title>
-  <script src="https://jsdelivr.net"></script>
   <style>
     :root {
-      --bg: #040706;
-      --bg-grid: rgba(0, 255, 136, 0.045);
-      --card: #09110e;
-      --card-elev: #0e1a15;
-      --border: #172b23;
-      --text: #f8fafc;
-      --muted: #94a3b8;
-      --accent: #00ff88;
-      --accent-dark: #00b35f;
-      --accent-glow: rgba(0, 255, 136, 0.35);
-      --neon-red: #ff2a5f;
-      --neon-red-glow: rgba(255, 42, 95, 0.3);
-      --win: #00ff88;
-      --loss: #ff2a5f;
+      --bg: #040706; --card: #09110e; --border: #172b23;
+      --text: #f8fafc; --muted: #94a3b8;
+      --green: #00ff88; --red: #ff2a5f;
     }
     * { box-sizing: border-box; scroll-behavior: smooth; }
-    body {
-      margin: 0;
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      background-color: var(--bg);
-      background-image:
-        radial-gradient(circle at 20% 0%, rgba(0, 255, 136, 0.14) 0%, transparent 48%),
-        radial-gradient(circle at 80% 0%, rgba(255, 42, 95, 0.12) 0%, transparent 48%),
-        linear-gradient(var(--bg-grid) 1px, transparent 1px),
-        linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
-      background-size: 100% 100%, 100% 100%, 48px 48px, 48px 48px;
-      color: var(--text);
-      line-height: 1.5;
-    }
+    body { margin: 0; font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.5; }
     a { color: inherit; text-decoration: none; }
-    .container { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
-    .neon-green { color: var(--accent); text-shadow: 0 0 18px rgba(0, 255, 136, 0.3); }
-    .neon-red { color: var(--neon-red); text-shadow: 0 0 18px rgba(255, 42, 95, 0.3); }
-    /* Buttons & Badges */
-    .pill-badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 6px 16px; border-radius: 999px;
-      background: rgba(0, 255, 136, 0.08); border: 1px solid rgba(0, 255, 136, 0.35);
-      color: #6ee7b7; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
-      box-shadow: 0 0 20px rgba(0, 255, 136, 0.14);
-    }
-    .btn-primary {
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      background: linear-gradient(135deg, #00ff88 0%, #00c46a 100%);
-      color: #03150c; font-weight: 800; font-size: 0.92rem;
-      padding: 11px 24px; border-radius: 999px; border: none; cursor: pointer;
-      box-shadow: 0 0 22px var(--accent-glow); transition: transform 0.15s, box-shadow 0.15s;
-    }
-    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 0 30px rgba(0, 255, 136, 0.55); }
-    .btn-red {
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      background: linear-gradient(135deg, #ff2a5f 0%, #cc1442 100%);
-      color: #fff; font-weight: 700; font-size: 0.9rem;
-      padding: 10px 22px; border-radius: 999px; border: none; cursor: pointer;
-      box-shadow: 0 0 20px var(--neon-red-glow);
-    }
-    .btn-outline {
-      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      background: #0d1713; color: #f8fafc; font-weight: 600; font-size: 0.9rem;
-      padding: 10px 22px; border-radius: 999px; border: 1px solid var(--border); cursor: pointer;
-    }
-    .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
-
-    /* Navbar & Hero */
-    header {
-      position: sticky; top: 0; z-index: 50;
-      background: rgba(4, 7, 6, 0.88); backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(0, 255, 136, 0.15);
-    }
-    .nav-inner { height: 72px; display: flex; align-items: center; justify-content: space-between; }
-    .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.15rem; }
-    .logo-icon {
-      background: linear-gradient(135deg, #00ff88 0%, #ff2a5f 100%);
-      color: #040706; padding: 5px 9px; border-radius: 7px; font-size: 0.82rem; font-weight: 900; letter-spacing: -0.3px;
-      box-shadow: 0 0 14px rgba(0, 255, 136, 0.35);
-    }
-    .nav-links { display: flex; gap: 28px; color: var(--muted); font-size: 0.9rem; font-weight: 500; }
-    .nav-links a:hover { color: var(--accent); }
-    .nav-actions { display: flex; align-items: center; gap: 12px; }
-    .icon-circle {
-      width: 36px; height: 36px; border-radius: 50%; background: var(--card-elev);
-      border: 1px solid var(--border); display: grid; place-items: center; color: var(--accent); font-size: 0.85rem;
-    }
-    .hero { text-align: center; padding: 95px 20px 80px; }
-    .hero h1 { font-size: clamp(2.4rem, 5.2vw, 4.1rem); font-weight: 800; letter-spacing: -0.03em; line-height: 1.12; margin: 22px 0 18px; }
-    .hero p { color: var(--muted); max-width: 560px; margin: 0 auto 30px; font-size: 1.05rem; }
-    /* Sections & Showcases */
-    .sec-head { text-align: center; padding: 70px 20px 45px; }
-    .sec-head h2 { font-size: clamp(1.9rem, 3.8vw, 2.8rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.18; margin: 16px 0 14px; }
-    .sec-head p { color: var(--muted); max-width: 600px; margin: 0 auto; font-size: 0.98rem; }
-    .showcase { display: grid; grid-template-columns: 1fr 1.15fr; gap: 48px; align-items: center; padding: 55px 0; }
-    .showcase.reverse { grid-template-columns: 1.15fr 1fr; }
-    @media (max-width: 900px) { .showcase, .showcase.reverse { grid-template-columns: 1fr; } .nav-links { display: none; } }
-    .feat-icon-box {
-      width: 44px; height: 44px; border-radius: 12px;
-      background: rgba(0, 255, 136, 0.1); border: 1px solid rgba(0, 255, 136, 0.35);
-      display: grid; place-items: center; color: var(--accent); font-size: 1.2rem; margin-bottom: 18px;
-      box-shadow: 0 0 15px rgba(0, 255, 136, 0.12);
-    }
-    .feat-icon-box.red {
-      background: rgba(255, 42, 95, 0.12); border-color: rgba(255, 42, 95, 0.38);
-      color: var(--neon-red); box-shadow: 0 0 15px rgba(255, 42, 95, 0.14);
-    }
-    .showcase h3 { font-size: 1.95rem; font-weight: 800; margin: 0 0 14px; letter-spacing: -0.02em; }
-    .showcase p { color: var(--muted); font-size: 0.96rem; margin-bottom: 22px; }
-    .check-list { list-style: none; padding: 0; margin: 0 0 24px; display: flex; flex-direction: column; gap: 11px; }
-    .check-list li { display: flex; align-items: center; gap: 10px; font-size: 0.92rem; color: #cbd5e1; }
-    .check-dot {
-      width: 18px; height: 18px; border-radius: 50%; background: rgba(0, 255, 136, 0.18);
-      color: var(--accent); display: grid; place-items: center; font-size: 0.7rem; flex-shrink: 0;
-    }
-    .check-dot.red { background: rgba(255, 42, 95, 0.18); color: var(--neon-red); }
-
-    /* Mockups & 3-Col Cards */
-    .mockup-frame {
-      background: #070d0b; border: 1.5px solid #1b3329; border-radius: 16px;
-      padding: 16px; box-shadow: 0 25px 60px rgba(0, 0, 0, 0.75), 0 0 25px rgba(0, 255, 136, 0.06);
-    }
-    .mock-topbar { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 14px; font-size: 0.78rem; color: var(--muted); }
-    .mock-grid-2 { display: grid; grid-template-columns: 1fr 1.4fr; gap: 12px; }
-    .mock-box { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-size: 0.75rem; }
-    .mock-kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 10px; }
-    .mock-kpi { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px; }
-    .mock-kpi small { color: var(--muted); font-size: 0.65rem; display: block; }
-    .mock-kpi strong { font-size: 0.95rem; }
-    .cards-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px; padding: 30px 0 60px; }
-    .info-card { background: linear-gradient(180deg, #0b1612 0%, #070d0a 100%); border: 1px solid var(--border); border-radius: 16px; padding: 28px; }
-    .info-card:hover { border-color: rgba(0, 255, 136, 0.4); }
-    .info-card h4 { font-size: 1.25rem; margin: 0 0 12px; }
-    .info-card p { color: var(--muted); font-size: 0.9rem; margin-bottom: 20px; }
-    .podium { display: grid; grid-template-columns: 1fr 1.1fr 1fr; gap: 10px; align-items: end; margin: 14px 0; text-align: center; }
-    .podium-card { background: var(--card-elev); border: 1px solid var(--border); border-radius: 10px; padding: 12px 8px; }
-    .podium-card.first { border-color: rgba(0, 255, 136, 0.6); background: linear-gradient(180deg, rgba(0, 255, 136, 0.14), var(--card-elev)); padding-bottom: 18px; }
-    .avatar { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #00ff88, #ff2a5f); color: #040706; display: grid; place-items: center; margin: 6px auto; font-weight: 800; font-size: 0.85rem; }
-    /* Pricing & FAQ */
-    .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 24px; padding: 20px 0 70px; }
-    .price-card { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 32px 26px; display: flex; flex-direction: column; position: relative; }
-    .price-card.popular { border: 1.5px solid var(--accent); background: linear-gradient(180deg, rgba(0, 255, 136, 0.12) 0%, var(--card) 48%); box-shadow: 0 0 40px rgba(0, 255, 136, 0.14); }
-    .pop-tag { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); background: linear-gradient(90deg, #00ff88, #ff2a5f); color: #040706; font-size: 0.7rem; font-weight: 900; padding: 4px 14px; border-radius: 999px; }
-    .price-amount { font-size: 2.5rem; font-weight: 800; margin: 10px 0 2px; }
-    .price-amount span { font-size: 0.9rem; color: var(--muted); font-weight: 500; }
-    .price-sub { color: var(--muted); font-size: 0.8rem; margin-bottom: 24px; }
-    .price-card .check-list { flex: 1; }
-    .price-btn { width: 100%; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer; border: 1px solid var(--border); background: #11211b; color: #fff; }
-    .price-card.popular .price-btn { background: var(--accent); color: #03150c; border: none; box-shadow: 0 0 20px var(--accent-glow); }
-
-    .faq-wrap { max-width: 820px; margin: 0 auto 70px; }
-    details.faq-item { border-bottom: 1px solid var(--border); padding: 20px 0; }
-    details.faq-item summary { list-style: none; cursor: pointer; font-size: 1.15rem; font-weight: 700; display: flex; justify-content: space-between; align-items: center; color: #fff; }
-    details.faq-item summary::-webkit-details-marker { display: none; }
-    details.faq-item summary span.faq-x { color: var(--neon-red); font-size: 1.2rem; transition: transform 0.2s; }
-    details.faq-item[open] summary span.faq-x { transform: rotate(0deg); }
-    details.faq-item:not([open]) summary span.faq-x { transform: rotate(45deg); color: var(--accent); }
-    details.faq-item p { color: var(--muted); font-size: 0.96rem; margin: 12px 0 0; line-height: 1.65; }
-
-    /* Learn More Rich Modals */
-    dialog.learn-modal {
-      background: #08100d; color: #fff; border: 1px solid rgba(0, 255, 136, 0.3); border-radius: 18px;
-      padding: 32px 28px; max-width: 680px; width: 94%; max-height: 88vh; overflow-y: auto;
-    }
-    dialog::backdrop { background: rgba(0, 0, 0, 0.82); backdrop-filter: blur(4px); }
-    .lm-close-x { position: sticky; top: 0; float: right; background: #13221c; border: 1px solid var(--border); color: var(--neon-red); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 700; }
-    .lm-header { text-align: center; margin-bottom: 24px; clear: both; }
-    .lm-box { background: #0c1713; border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 16px; }
-    .lm-box h4 { margin: 0 0 14px; font-size: 1.02rem; display: flex; align-items: center; gap: 8px; }
-    .lm-box ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; color: #cbd5e1; font-size: 0.9rem; }
-    .lm-box ul li::before { content: "✓"; color: var(--accent); font-weight: 700; margin-right: 10px; }
-    .lm-benefits { background: rgba(0, 255, 136, 0.08); border: 1px solid rgba(0, 255, 136, 0.3); border-radius: 14px; padding: 20px; margin-bottom: 22px; }
-    .lm-benefits-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 0.88rem; color: #e2e8f0; margin-top: 12px; }
-    @media (max-width: 600px) { .lm-benefits-grid { grid-template-columns: 1fr; } }
-    .lm-benefit-item { display: flex; align-items: flex-start; gap: 8px; }
-    .lm-benefit-dot { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); color: #03150c; font-weight: 900; font-size: 0.7rem; display: grid; place-items: center; flex-shrink: 0; margin-top: 2px; }
-    /* Contact, CTA & Footer */
-    .contact-grid { display: grid; grid-template-columns: 1fr 1.15fr; gap: 40px; padding: 50px 0 80px; align-items: start; }
-    @media (max-width: 850px) { .contact-grid { grid-template-columns: 1fr; } }
-    .contact-item { display: flex; align-items: center; gap: 14px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
-    .contact-form-box { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 30px; }
-    .field-group { margin-bottom: 16px; }
-    .field-group label { display: block; font-size: 0.82rem; color: #cbd5e1; margin-bottom: 6px; font-weight: 600; }
-    .field-group input, .field-group textarea { width: 100%; background: #060b09; border: 1px solid var(--border); border-radius: 9px; padding: 12px 14px; color: #fff; font-size: 0.92rem; font-family: inherit; }
-    .field-group input:focus, .field-group textarea:focus { outline: none; border-color: var(--accent); }
-    .cta-banner {
-      background: radial-gradient(circle at 30% 0%, rgba(0, 255, 136, 0.2), transparent 55%),
-                  radial-gradient(circle at 75% 100%, rgba(255, 42, 95, 0.18), #08110e 70%);
-      border: 1px solid rgba(0, 255, 136, 0.3); border-radius: 22px; text-align: center;
-      padding: 64px 24px; margin: 20px 0 70px;
-    }
-    .cta-banner h2 { font-size: clamp(1.9rem, 3.6vw, 2.6rem); margin: 0 0 14px; line-height: 1.18; }
-    .cta-banner p { color: var(--muted); max-width: 540px; margin: 0 auto 28px; }
-    footer { border-top: 1px solid var(--border); padding: 60px 0 30px; background: #030605; }
-    .footer-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1.2fr; gap: 36px; margin-bottom: 45px; }
-    @media (max-width: 850px) { .footer-grid { grid-template-columns: 1fr 1fr; } }
-    .footer-col h5 { font-size: 0.78rem; letter-spacing: 0.08em; color: #fff; margin: 0 0 16px; }
-    .footer-col ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; color: var(--muted); font-size: 0.88rem; }
-    .footer-col ul a:hover { color: var(--accent); }
-    .socials { display: flex; gap: 10px; margin-top: 18px; }
-    .social-btn { width: 34px; height: 34px; border-radius: 8px; background: var(--card); border: 1px solid var(--border); display: grid; place-items: center; color: var(--muted); font-size: 0.85rem; }
-    .social-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .footer-bottom { border-top: 1px solid var(--border); padding-top: 22px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; color: var(--muted); font-size: 0.82rem; }
-
-    /* Live App View */
-    #appView { display: none; min-height: 100vh; background: #040807; }
-    .app-shell { display: flex; min-height: 100vh; }
-    .app-sidebar { width: 245px; background: #08100d; border-right: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; gap: 8px; }
-    .app-nav-btn { background: transparent; border: none; color: var(--muted); text-align: left; padding: 10px 14px; border-radius: 8px; cursor: pointer; font-weight: 500; }
-    .app-nav-btn.active, .app-nav-btn:hover { background: var(--card-elev); color: var(--accent); }
-    .app-main { flex: 1; padding: 26px; max-width: 1320px; }
-    .app-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 14px; margin: 20px 0; }
-    .app-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
-    .app-dash-grid { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; margin-bottom: 20px; }
-    @media (max-width: 900px) { .app-dash-grid { grid-template-columns: 1fr; } .app-sidebar { display: none; } }
-    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; }
-    .cal-cell { background: #060b09; border: 1px solid var(--border); border-radius: 6px; min-height: 52px; padding: 5px; font-size: 0.75rem; display: flex; flex-direction: column; justify-content: space-between; }
-    .cal-cell.win-day { background: rgba(0, 255, 136, 0.16); border-color: rgba(0, 255, 136, 0.55); }
-    .cal-cell.loss-day { background: rgba(255, 42, 95, 0.18); border-color: rgba(255, 42, 95, 0.55); }
-    table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
-    th, td { padding: 11px; text-align: left; border-bottom: 1px solid var(--border); }
-    th { color: var(--muted); }
-    .win { color: var(--win); font-weight: 700; }
-    .loss { color: var(--loss); font-weight: 700; }
-    dialog.trade-modal { background: #08100d; color: #fff; border: 1px solid rgba(0, 255, 136, 0.35); border-radius: 14px; padding: 24px; max-width: 620px; width: 92%; }
-    .modal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); gap: 12px; margin-top: 14px; }
-    .modal-grid input, .modal-grid select, .modal-grid textarea { background: #050a08; border: 1px solid var(--border); color: #fff; padding: 10px; border-radius: 8px; }
+    .container { max-width: 1140px; margin: 0 auto; padding: 0 24px; }
+    .neon-green { color: var(--green); }
+    .neon-red { color: var(--red); }
+    .btn-green { background: linear-gradient(135deg, #00ff88, #00c46a); color: #03150c; font-weight: 800; padding: 12px 26px; border-radius: 999px; border: none; cursor: pointer; display: inline-block; }
+    .btn-red { background: linear-gradient(135deg, #ff2a5f, #cc1442); color: #fff; font-weight: 700; padding: 12px 24px; border-radius: 999px; border: none; cursor: pointer; display: inline-block; }
+    .btn-outline { background: #0d1713; color: #fff; border: 1px solid var(--border); padding: 10px 20px; border-radius: 999px; cursor: pointer; font-weight: 600; }
+    header { position: sticky; top: 0; background: rgba(4,7,6,0.92); border-bottom: 1px solid var(--border); z-index: 50; }
+    .nav { height: 70px; display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-weight: 800; font-size: 1.15rem; display: flex; align-items: center; gap: 10px; }
+    .badge-logo { background: linear-gradient(135deg, #00ff88, #ff2a5f); color: #040706; padding: 4px 8px; border-radius: 6px; font-weight: 900; font-size: 0.8rem; }
+    .nav-links { display: flex; gap: 24px; color: var(--muted); font-size: 0.9rem; }
+    @media (max-width: 800px) { .nav-links { display: none; } }
+    .hero { text-align: center; padding: 90px 20px 70px; }
+    .hero h1 { font-size: clamp(2.2rem, 5vw, 3.8rem); line-height: 1.15; margin: 18px 0; }
+    .hero p { color: var(--muted); max-width: 560px; margin: 0 auto 28px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; padding: 40px 0; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 26px; }
+    .card h3 { margin-top: 0; }
+    .card p { color: var(--muted); font-size: 0.92rem; }
+    .faq-item { border-bottom: 1px solid var(--border); padding: 16px 0; }
+    .faq-item summary { cursor: pointer; font-weight: 700; }
+    .faq-item p { color: var(--muted); margin: 10px 0 0; font-size: 0.92rem; }
+    footer { border-top: 1px solid var(--border); padding: 40px 0; text-align: center; color: var(--muted); font-size: 0.85rem; margin-top: 60px; }
   </style>
 </head>
 <body>
-<div id="landingView">
   <header>
-    <div class="container nav-inner">
-      <a href="#" class="logo"><span class="logo-icon">P2PFB</span> P2P <span class="neon-green">FX</span> <span class="neon-red">Terminal</span></a>
+    <div class="container nav">
+      <a href="#" class="logo"><span class="badge-logo">P2PFB</span> P2P <span class="neon-green">FX</span> <span class="neon-red">Terminal</span></a>
       <nav class="nav-links">
         <a href="#features">Features</a>
-        <a href="#community">Community</a>
         <a href="#pricing">Pricing</a>
         <a href="#faq">FAQ</a>
         <a href="#contact">Contact</a>
       </nav>
-      <div class="nav-actions">
-        <div class="icon-circle">⚡</div>
-        <button class="btn-primary" onclick="openJournalApp()">Get Started</button>
-      </div>
+      <button class="btn-green" onclick="openJournalApp()">Get Started</button>
     </div>
   </header>
 
   <section class="hero container">
-    <div class="pill-badge">🏆 THE TRADING JOURNAL THAT WORKS FOR YOU</div>
+    <span style="border:1px solid var(--green); color:var(--green); padding:5px 14px; border-radius:999px; font-size:0.75rem; font-weight:700;">THE TRADING JOURNAL THAT WORKS FOR YOU</span>
     <h1>Track Trades. <span class="neon-green">Analyze PnL.</span><br><span class="neon-red">Master Markets.</span></h1>
-    <p>Sync your trades, journal every setup, backtest ideas, and let AI do the analysis on P2P FX Terminal.</p>
-    <div style="display:flex; justify-content:center; gap:14px; flex-wrap:wrap;">
-      <button class="btn-primary" style="padding: 13px 30px; font-size: 1rem;" onclick="openJournalApp()">Get Started →</button>
-      <a href="https://wa.me" target="_blank" class="btn-red" style="padding: 13px 26px;">Join WhatsApp Community</a>
+    <p>Sync your trades, journal every setup, backtest ideas with TradingView-style bar replay, and let AI analyze your edge.</p>
+    <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap;">
+      <button class="btn-green" onclick="openJournalApp()">Get Started →</button>
+      <a href="https://wa.me" target="_blank" class="btn-red">WhatsApp Community</a>
     </div>
   </section>
 
-  <section id="features" class="sec-head container">
-    <div class="pill-badge">WHAT YOU GET</div>
-    <h2>Everything You Need to<br><span class="neon-green">Master</span> Your <span class="neon-red">Trading</span></h2>
-    <p>From the moment you place a trade to the lessons you take from it — we've built tools for every step of your journey.</p>
-  </section>
-
-  <section class="container showcase">
-    <div>
-      <div class="feat-icon-box">↺</div>
-      <h3>Strategy <span class="neon-green">Backtesting</span></h3>
-      <p>Got a strategy idea? Test it on real historical data before risking real money. Pick a symbol, choose your timeframe, and replay the market candle by candle — opening and closing trades as if you were live.</p>
-      <ul class="check-list">
-        <li><span class="check-dot">✓</span> Replay trades on real market data</li>
-        <li><span class="check-dot">✓</span> Win rate, expectancy & risk analysis</li>
-        <li><span class="check-dot">✓</span> Multiple timeframes from 1m to 1W</li>
-      </ul>
+  <section id="features" class="container grid-3">
+    <div class="card">
+      <h3 class="neon-green">↺ Strategy Backtesting</h3>
+      <p>Replay historical candles bar by bar, test entries with SL/TP, and track win rate before risking real capital. Free for 7 days.</p>
     </div>
-    <div class="mockup-frame">
-      <div class="mock-topbar"><span><strong>Backtesting</strong> • EURUSD • 15m</span><span class="win">+$2,410.00 (+4.8%)</span></div>
-      <div style="height: 210px; background: linear-gradient(180deg, rgba(0,255,136,0.06), transparent); border: 1px solid var(--border); border-radius: 10px; display: flex; align-items: flex-end; padding: 14px; gap: 8px;">
-        <div style="width:14px;height:45%;background:var(--accent);border-radius:2px;box-shadow:0 0 10px var(--accent-glow);"></div>
-        <div style="width:14px;height:68%;background:var(--accent);border-radius:2px;box-shadow:0 0 10px var(--accent-glow);"></div>
-        <div style="width:14px;height:52%;background:var(--neon-red);border-radius:2px;box-shadow:0 0 10px var(--neon-red-glow);"></div>
-        <div style="width:14px;height:82%;background:var(--accent);border-radius:2px;box-shadow:0 0 10px var(--accent-glow);"></div>
-        <div style="width:14px;height:75%;background:var(--accent);border-radius:2px;box-shadow:0 0 10px var(--accent-glow);"></div>
-        <div style="width:14px;height:90%;background:var(--accent);border-radius:2px;box-shadow:0 0 10px var(--accent-glow);"></div>
-        <div style="width:14px;height:62%;background:var(--neon-red);border-radius:2px;box-shadow:0 0 10px var(--neon-red-glow);"></div>
-        <div style="width:14px;height:78%;background:var(--accent);border-radius:2px;box-shadow:0 0 10px var(--accent-glow);"></div>
-        <div style="width:14px;height:88%;background:var(--accent);border-radius:2px;box-shadow:0 0 10px var(--accent-glow);"></div>
-      </div>
+    <div class="card">
+      <h3 class="neon-red">▤ Rich Trade Journaling</h3>
+      <p>Log setups, pre-trade checklists, emotions, and lessons across Forex, Stocks, F&O, and Crypto in one terminal.</p>
     </div>
-  </section>
-  <section class="container showcase reverse">
-    <div class="mockup-frame">
-      <div class="mock-topbar"><span><strong>Journal</strong> • XAUUSD</span><span class="win">+$420.50</span></div>
-      <div class="mock-grid-2">
-        <div class="mock-box">
-          <div style="padding:6px; border-bottom:1px solid var(--border);"><strong class="win">XAUUSD</strong> • +$420.50</div>
-          <div style="padding:6px; border-bottom:1px solid var(--border);"><strong class="loss">BTCUSD</strong> • -$85.00</div>
-          <div style="padding:6px; border-bottom:1px solid var(--border);"><strong class="win">NIFTY</strong> • +$310.00</div>
-          <div style="padding:6px;"><strong class="win">EURUSD</strong> • +$195.20</div>
-        </div>
-        <div class="mock-box">
-          <div style="color:var(--muted); margin-bottom:4px;">PRE-TRADE ANALYSIS</div>
-          <div style="background:#040807; padding:8px; border-radius:6px; margin-bottom:8px;">London sweep of Asian lows + 15m BOS.</div>
-          <div style="color:var(--muted); margin-bottom:4px;">EMOTION & RATING</div>
-          <div style="display:flex; justify-content:space-between;"><span>Disciplined</span><span class="neon-green">9/10 ★</span></div>
-        </div>
-      </div>
-    </div>
-    <div>
-      <div class="feat-icon-box red">▤</div>
-      <h3>Rich <span class="neon-red">Trade Journaling</span></h3>
-      <p>Every trade tells a story. Add notes about your setup, tag your strategy, attach screenshots, and track how you felt. When you review your journal later, the patterns become obvious.</p>
-      <ul class="check-list">
-        <li><span class="check-dot red">✓</span> Notes, tags & screenshot attachments</li>
-        <li><span class="check-dot red">✓</span> Emotional tracking & trade ratings</li>
-        <li><span class="check-dot red">✓</span> Pre-trade checklists & templates</li>
-      </ul>
-      <button class="btn-outline" onclick="document.getElementById('modalJournaling').showModal()">Learn More</button>
-    </div>
-  </section>
-
-  <section class="container showcase">
-    <div>
-      <div class="feat-icon-box">▊</div>
-      <h3>Powerful <span class="neon-green">Analytics</span></h3>
-      <p>See your trading performance laid out clearly. Equity curves, calendar heatmaps, session breakdowns, profit factor, risk/reward — everything is calculated automatically so you can focus on improving.</p>
-      <ul class="check-list">
-        <li><span class="check-dot">✓</span> Equity curves & drawdown charts</li>
-        <li><span class="check-dot">✓</span> Calendar heatmap with daily P&L</li>
-        <li><span class="check-dot">✓</span> Breakdowns by session, symbol & tag</li>
-      </ul>
-      <button class="btn-outline" onclick="document.getElementById('modalAnalytics').showModal()">Learn More</button>
-    </div>
-    <div class="mockup-frame">
-      <div class="mock-topbar"><span><strong>Performance Analytics</strong></span><span>All Time</span></div>
-      <div class="mock-kpi-row">
-        <div class="mock-kpi"><small>NET PNL</small><strong class="win">$1,457.39</strong></div>
-        <div class="mock-kpi"><small>WIN RATE</small><strong class="neon-green">66.7%</strong></div>
-        <div class="mock-kpi"><small>PROFIT FACTOR</small><strong>2.84</strong></div>
-        <div class="mock-kpi"><small>MAX DD</small><strong class="loss">-$142.10</strong></div>
-      </div>
-      <div class="mock-box" style="height: 130px; display:flex; align-items:flex-end;">
-        <svg viewBox="0 0 300 80" style="width:100%; height:100%;">
-          <path d="M0,70 L50,55 L100,62 L160,35 L220,25 L300,8 L300,80 L0,80 Z" fill="rgba(0,255,136,0.2)"/>
-          <path d="M0,70 L50,55 L100,62 L160,35 L220,25 L300,8" fill="none" stroke="#00ff88" stroke-width="2.5"/>
-        </svg>
-      </div>
-    </div>
-  </section>
-  <section class="container cards-3">
-    <div class="info-card">
-      <div class="feat-icon-box">↻</div>
-      <h4>MT5 Real-Time Sync</h4>
-      <p>Link your MetaTrader 4 or 5 account and your trades show up automatically. No copy-pasting, no manual entry. Just connect and go.</p>
-      <ul class="check-list">
-        <li><span class="check-dot">✓</span> Real-time sync with any MT4/MT5 broker</li>
-        <li><span class="check-dot">✓</span> Auto-import trades, positions & history</li>
-        <li><span class="check-dot">✓</span> Supports multiple accounts at once</li>
-      </ul>
-    </div>
-    <div class="info-card">
-      <div class="feat-icon-box red">🤖</div>
-      <h4>AI-Powered Reports</h4>
-      <p>Our AI reads through your trades and gives you a full breakdown — what's working, what's not, and exactly what to focus on next.</p>
-      <ul class="check-list">
-        <li><span class="check-dot red">✓</span> Personalized performance analysis</li>
-        <li><span class="check-dot red">✓</span> Blind spot & pattern detection</li>
-        <li><span class="check-dot red">✓</span> Actionable improvement plan</li>
-      </ul>
-    </div>
-    <div class="info-card">
-      <div class="feat-icon-box">👥</div>
-      <h4>Community & Leaderboard</h4>
-      <p>Trade alongside thousands of others. Share your trades, climb the leaderboard, and learn from traders who are getting results.</p>
-      <ul class="check-list">
-        <li><span class="check-dot">✓</span> Real-time chat & trade sharing</li>
-        <li><span class="check-dot">✓</span> Weekly & monthly leaderboards</li>
-        <li><span class="check-dot">✓</span> Traders Lounge for mentoring</li>
-      </ul>
-    </div>
-  </section>
-
-  <section id="community" class="sec-head container">
-    <div class="pill-badge">COMMUNITY</div>
-    <h2>Trade <span class="neon-green">Together</span>,<br>Grow <span class="neon-red">Together</span></h2>
-    <p>Trading doesn't have to be lonely. Connect with P2P FX Terminal traders, share ideas, and see how you stack up.</p>
-  </section>
-
-  <section class="container showcase">
-    <div>
-      <div class="feat-icon-box">👥</div>
-      <h3>Traders <span class="neon-green">Lounge</span></h3>
-      <p>Step into the Traders Lounge — where top traders from around the world share market updates, trade ideas, and insights to help you grow. Learn from the best, in real time.</p>
-      <ul class="check-list">
-        <li><span class="check-dot">✓</span> Market updates from experienced traders</li>
-        <li><span class="check-dot">✓</span> Real-time chat & reactions</li>
-        <li><span class="check-dot">✓</span> Trade ideas, signals & discussions</li>
-      </ul>
-    </div>
-    <div class="mockup-frame">
-      <div class="mock-topbar"><span><strong>Community</strong> • Traders Lounge</span><span class="win">● 142 Online</span></div>
-      <div class="mock-grid-2" style="grid-template-columns: 1.5fr 1fr;">
-        <div class="mock-box">
-          <strong>Traders Lounge</strong>
-          <p style="font-size:0.72rem; margin:6px 0 12px;">Connect with P2P FX Terminal traders worldwide. Share insights, discuss markets, and learn in real time.</p>
-          <span class="neon-green" style="font-size:0.75rem;">Enter the lounge →</span>
-        </div>
-        <div style="display:flex; flex-direction:column; gap:8px;">
-          <div class="mock-box"><strong>Friends</strong><br><small style="color:var(--muted);">View connections</small></div>
-          <div class="mock-box"><strong>Leaderboard</strong><br><small style="color:var(--muted);">View top traders</small></div>
-          <div class="mock-box"><strong>Trade Rooms</strong><br><small style="color:var(--muted);">Live voice & chat</small></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="container showcase reverse">
-    <div class="mockup-frame">
-      <div class="mock-topbar"><span><strong>Leaderboard</strong> • Top Performing Traders</span><span>This Year</span></div>
-      <div class="podium">
-        <div class="podium-card"><small>2nd</small><div class="avatar">AT</div><strong>Atul</strong><div class="win">+$717.83</div></div>
-        <div class="podium-card first"><small class="neon-green">👑 1st</small><div class="avatar">AS</div><strong>Atal Shendge</strong><div class="win">+$3,985.96</div></div>
-        <div class="podium-card"><small>3rd</small><div class="avatar">SS</div><strong>Sukhpal Singh</strong><div class="win">+$634.10</div></div>
-      </div>
-    </div>
-    <div>
-      <div class="feat-icon-box red">🔗</div>
-      <h3>Leaderboard & <span class="neon-red">Share Cards</span></h3>
-      <p>See where you rank among other traders. Generate professional share cards for social media to show off your stats, or share read-only access to your account.</p>
-      <ul class="check-list">
-        <li><span class="check-dot red">✓</span> Daily, weekly & monthly rankings</li>
-        <li><span class="check-dot red">✓</span> Custom share cards for social media</li>
-        <li><span class="check-dot red">✓</span> Friend requests & direct messages</li>
-      </ul>
+    <div class="card">
+      <h3 class="neon-green">🤖 AI-Powered Reports</h3>
+      <p>Get automated AI performance grades, FOMO/Revenge leak detection, and actionable improvement plans. Free for 7 days.</p>
     </div>
   </section>
   <section id="pricing" class="container">
-    <div class="sec-head">
-      <div class="pill-badge">PRICING</div>
-      <h2>Simple, Transparent Plans</h2>
-      <p>Start free for our P2P FX Terminal community — upgrade anytime as your trading grows.</p>
-    </div>
-    <div class="pricing-grid">
-      <div class="price-card popular">
-        <div class="pop-tag">COMMUNITY FREE ACCESS</div>
-        <strong class="neon-green">Free</strong>
-        <div class="price-amount">$0 <span>/month</span></div>
-        <div class="price-sub">Free forever for P2P FX Terminal members</div>
-        <ul class="check-list">
-          <li><span class="check-dot">✓</span> Unlimited local trades</li>
-          <li><span class="check-dot">✓</span> Manual trade entry & CSV export</li>
-          <li><span class="check-dot">✓</span> Equity curve & calendar heatmap</li>
-          <li><span class="check-dot">✓</span> All markets (Forex, Stocks, Crypto, F&O)</li>
-        </ul>
-        <button class="price-btn" onclick="openJournalApp()">Launch Free Terminal</button>
+    <h2 style="text-align:center;">Simple, Transparent Plans</h2>
+    <div class="grid-3">
+      <div class="card" style="border-color:var(--green);">
+        <strong class="neon-green">Free + 7-Day Trial</strong>
+        <h2>$0 <small style="font-size:0.9rem; color:var(--muted);">/month</small></h2>
+        <p>Unlimited manual trades, Economic Calendar, Calculators + 7-Day Free Trial of AI Reports & Backtesting.</p>
+        <button class="btn-green" style="width:100%;" onclick="openJournalApp()">Start Free Trial</button>
       </div>
-      <div class="price-card">
+      <div class="card">
         <strong>Pro</strong>
-        <div class="price-amount">$10.99 <span>/month</span></div>
-        <div class="price-sub">if billed yearly</div>
-        <ul class="check-list">
-          <li><span class="check-dot">✓</span> Unlimited trades</li>
-          <li><span class="check-dot">✓</span> 3 MT4/MT5 accounts with real-time sync</li>
-          <li><span class="check-dot">✓</span> AI-powered trade reports</li>
-          <li><span class="check-dot">✓</span> Full analytics & charts</li>
-          <li><span class="check-dot">✓</span> Community chat access</li>
-          <li><span class="check-dot">✓</span> Economic calendar & news data</li>
-        </ul>
-        <button class="price-btn" onclick="openJournalApp()">Get Started</button>
+        <h2>$10.99 <small style="font-size:0.9rem; color:var(--muted);">/month</small></h2>
+        <p>Unlimited AI Trade Reports, Traders Lounge VIP ideas, and 3 MT4/MT5 accounts.</p>
+        <a href="https://wa.me" target="_blank" class="btn-outline" style="width:100%; text-align:center; display:block;">Contact to Upgrade</a>
       </div>
-      <div class="price-card">
+      <div class="card">
         <strong class="neon-red">Elite</strong>
-        <div class="price-amount">$19.99 <span>/month</span></div>
-        <div class="price-sub">if billed yearly</div>
-        <ul class="check-list">
-          <li><span class="check-dot red">✓</span> Everything in Pro</li>
-          <li><span class="check-dot red">✓</span> Unlimited MT4/MT5 accounts</li>
-          <li><span class="check-dot red">✓</span> Backtesting engine</li>
-          <li><span class="check-dot red">✓</span> AI news analysis</li>
-          <li><span class="check-dot red">✓</span> Traders Lounge access</li>
-          <li><span class="check-dot red">✓</span> VIP & mentor support</li>
-        </ul>
-        <button class="price-btn" onclick="openJournalApp()">Select Plan</button>
+        <h2>$19.99 <small style="font-size:0.9rem; color:var(--muted);">/month</small></h2>
+        <p>Everything in Pro + Unlimited Bar Replay Backtesting & 1-on-1 mentorship.</p>
+        <a href="https://wa.me" target="_blank" class="btn-outline" style="width:100%; text-align:center; display:block;">Contact to Upgrade</a>
       </div>
     </div>
   </section>
-  <section id="faq" class="container">
-    <div class="sec-head">
-      <div class="pill-badge">FAQ</div>
-      <h2>Frequently Asked Questions</h2>
-      <p>Everything you need to know about P2P FX Terminal, syncing, analytics, and privacy.</p>
-    </div>
-    <div class="faq-wrap">
-      <details class="faq-item" open>
-        <summary>What is P2P FX Terminal? <span class="faq-x">✕</span></summary>
-        <p>P2P FX Terminal is a trading journal that does the heavy lifting for you. It syncs your MT4/MT5 trades automatically, tracks your P&L, lets you journal and backtest, and uses AI to show you what you're doing right and wrong. It works for forex, stocks, crypto — anything you trade on MetaTrader or any broker.</p>
-      </details>
-      <details class="faq-item" open>
-        <summary>How does the MT5 sync work? <span class="faq-x">✕</span></summary>
-        <p>You connect your MT4 or MT5 account using your investor password (read-only, so it can't touch your funds). Once connected, your trades sync in real time. Every new position, every close — it all shows up automatically in your journal. No manual entry needed.</p>
-      </details>
-      <details class="faq-item" open>
-        <summary>What do the AI reports actually tell me? <span class="faq-x">✕</span></summary>
-        <p>The AI looks at your entire trade history and breaks it down — your win rate, profit factor, risk habits, emotional patterns, blind spots, and even revenge trading tendencies. It gives you a letter grade and a specific list of things to work on to get better.</p>
-      </details>
-      <details class="faq-item" open>
-        <summary>How does backtesting work? <span class="faq-x">✕</span></summary>
-        <p>You pick a symbol, timeframe, and date range, then the chart replays candle by candle. You can open and close positions as if you were trading live, complete with stop loss and take profit. At the end, you get full stats on how your strategy performed.</p>
-      </details>
-      <details class="faq-item" open>
-        <summary>Is my data safe? <span class="faq-x">✕</span></summary>
-        <p>Yes. We use bank-level encryption (AES-256) and local browser storage so your trade logs stay strictly private. We can never place, modify, or close trades on your behalf. Your data is yours — we don't share it with anyone.</p>
-      </details>
-      <details class="faq-item" open>
-        <summary>Is there a free plan? <span class="faq-x">✕</span></summary>
-        <p>Absolutely. Our community edition gives you unlimited manual trade entries, equity curve analytics, and daily P&L calendar heatmaps completely free. If you want cloud MT5 sync, AI reports, and backtesting, you can explore Pro and Elite.</p>
-      </details>
-      <details class="faq-item" open>
-        <summary>Can I share my performance? <span class="faq-x">✕</span></summary>
-        <p>Yes. You can generate share cards in different formats (story, post, landscape) and download them or share directly to social media, or export your CSV/JSON reports anytime.</p>
-      </details>
-      <details class="faq-item" open>
-        <summary>What markets are supported? <span class="faq-x">✕</span></summary>
-        <p>All markets — forex pairs, gold, silver, indices, F&O, stocks, and crypto. You can log and filter trades across every asset class in one unified terminal.</p>
-      </details>
-    </div>
-  </section>
-  <section id="contact" class="container contact-grid">
-    <div>
-      <div class="pill-badge">GET IN TOUCH</div>
-      <h2 style="font-size:2.4rem; margin:16px 0 12px; line-height:1.15;">Let's Start a<br><span class="neon-green">Conversation</span></h2>
-      <p style="color:var(--muted); margin-bottom:26px;">Questions about P2P FX Terminal? Need help getting set up? We're real people and we'll get back to you fast.</p>
-      <a href="mailto:pipetoprofit@gmail.com" class="contact-item">
-        <div class="feat-icon-box" style="margin:0;">✉</div>
-        <div><small style="color:var(--muted);">Email us at</small><br><strong>pipetoprofit@gmail.com</strong></div>
-      </a>
-      <a href="https://wa.me" target="_blank" class="contact-item">
-        <div class="feat-icon-box red" style="margin:0;">💬</div>
-        <div><small style="color:var(--muted);">WhatsApp us</small><br><strong>+91 7506532473</strong></div>
-      </a>
-      <div class="contact-item">
-        <div class="feat-icon-box" style="margin:0;">🕒</div>
-        <div><small style="color:var(--muted);">Response time</small><br><strong>Within 24 hours</strong></div>
-      </div>
-    </div>
 
-    <div class="contact-form-box">
-      <h3 style="margin:0 0 6px; text-align:center;">Send us a message</h3>
-      <p style="color:var(--muted); font-size:0.85rem; text-align:center; margin:0 0 22px;">Fill out the form below and we'll respond promptly.</p>
-      <form onsubmit="event.preventDefault(); window.location.href='mailto:pipetoprofit@://gmail.com FX Terminal Inquiry&body=' + encodeURIComponent(this.msg.value);">
-        <div class="field-group"><label>👤 Name</label><input type="text" placeholder="John Doe" required></div>
-        <div class="field-group"><label>@ Email</label><input type="email" placeholder="john@example.com" required></div>
-        <div class="field-group"><label>💬 Message</label><textarea name="msg" rows="4" placeholder="Tell us how we can help you..." required></textarea></div>
-        <button type="submit" class="btn-primary" style="width:100%; border-radius:10px; padding:13px;">Send Message ➤</button>
-      </form>
-    </div>
+  <section id="faq" class="container" style="max-width:800px;">
+    <h2 style="text-align:center;">Frequently Asked Questions</h2>
+    <details class="faq-item" open><summary>What is P2P FX Terminal?</summary><p>A complete multi-market trading journal with bar replay backtesting, AI reports, economic calendar, and risk calculators.</p></details>
+    <details class="faq-item"><summary>How does the 7-day free trial work?</summary><p>Every new member gets full access to AI Reports and Bar Replay Backtesting free for 7 days after verifying their email OTP.</p></details>
+    <details class="faq-item"><summary>What markets are supported?</summary><p>Forex, Gold/Commodities, Crypto, Stocks, and Indian F&O indices (NIFTY/BANKNIFTY).</p></details>
   </section>
-
-  <section class="container">
-    <div class="cta-banner">
-      <h2>Stop Guessing.<br><span class="neon-green">Start Trading</span> <span class="neon-red">Smarter.</span></h2>
-      <p>Join thousands of traders who journal their trades, backtest their ideas, and use AI to keep improving. It's free to start.</p>
-      <button class="btn-primary" style="padding:14px 32px; font-size:1rem;" onclick="openJournalApp()">Get Started for Free →</button>
-    </div>
+  <section id="contact" class="container" style="text-align:center; padding-top:40px;">
+    <h2>Get In Touch</h2>
+    <p style="color:var(--muted);">Email: <strong>pipetoprofit@gmail.com</strong> • WhatsApp: <strong>+91 7506532473</strong></p>
   </section>
 
   <footer>
-    <div class="container">
-      <div class="footer-grid">
-        <div>
-          <div class="logo"><span class="logo-icon">P2PFB</span> P2P <span class="neon-green">FX</span> <span class="neon-red">Terminal</span></div>
-          <p style="color:var(--muted); font-size:0.88rem; margin-top:14px; max-width:270px;">Your trading journal with MT5 sync, backtesting, AI reports, and a community of traders who care about getting better.</p>
-          <div class="socials">
-            <a href="https://wa.me" target="_blank" class="social-btn" title="WhatsApp">💬</a>
-            <a href="mailto:pipetoprofit@gmail.com" class="social-btn" title="Email">✉</a>
-            <a href="#community" class="social-btn" title="Community">👥</a>
-          </div>
-        </div>
-        <div class="footer-col">
-          <h5>PLATFORM</h5>
-          <ul>
-            <li><a href="#features">Features</a></li>
-            <li><a href="#features">How It Works</a></li>
-            <li><a href="#community">Community</a></li>
-            <li><a href="#pricing">Pricing</a></li>
-            <li><a href="#faq">FAQ</a></li>
-          </ul>
-        </div>
-        <div class="footer-col">
-          <h5>COMPANY</h5>
-          <ul>
-            <li><a href="#contact">About Us</a></li>
-            <li><a href="mailto:pipetoprofit@gmail.com">pipetoprofit@gmail.com</a></li>
-            <li><a href="https://wa.me" target="_blank">WhatsApp: 7506532473</a></li>
-            <li><a href="#contact">Contact</a></li>
-            <li><a href="#faq">Privacy Policy</a></li>
-          </ul>
-        </div>
-        <div class="footer-col">
-          <h5>GET STARTED</h5>
-          <p style="color:var(--muted); font-size:0.88rem; margin:0 0 16px;">Join P2P FX Terminal traders who are already mastering the markets.</p>
-          <button class="btn-primary" style="border-radius:10px;" onclick="openJournalApp()">Start Journaling →</button>
-        </div>
-      </div>
-      <div class="footer-bottom">
-        <span>© 2026 P2P FX Terminal. All rights reserved.</span>
-        <span>Privacy · Terms</span>
-        <span>Built for Traders, by Traders</span>
-      </div>
-    </div>
+    <div class="container">© 2026 P2P FX Terminal (P2PFB). Built for Traders, by Traders.</div>
   </footer>
-</div>
-<dialog id="modalAnalytics" class="learn-modal">
-  <button class="lm-close-x" onclick="document.getElementById('modalAnalytics').close()">✕</button>
-  <div class="lm-header">
-    <div class="feat-icon-box" style="margin:0 auto 14px;">▊</div>
-    <h2 style="margin:0 0 6px; font-size:1.75rem;">Powerful <span class="neon-green">Analytics</span></h2>
-    <div style="color:var(--muted); font-size:0.92rem; margin-bottom:14px;">Data-driven insights for better trading decisions</div>
-    <p style="color:#cbd5e1; font-size:0.92rem; max-width:560px; margin:0 auto;">Go beyond simple P&L tracking with comprehensive analytics that reveal the true performance of your trading. Our P2P FX Terminal dashboard transforms raw trade data into actionable insights.</p>
-  </div>
-  <div class="lm-box">
-    <h4><span class="neon-green">›</span> Performance Metrics</h4>
-    <ul>
-      <li>Equity curve visualization with drawdown analysis</li>
-      <li>Win rate and profit factor calculations</li>
-      <li>Risk-adjusted returns (Sharpe, Sortino ratios)</li>
-      <li>Average winner vs average loser comparison</li>
-      <li>Expectancy calculations for each strategy</li>
-    </ul>
-  </div>
-  <div class="lm-box">
-    <h4><span class="neon-green">›</span> Visual Analytics</h4>
-    <ul>
-      <li>Calendar heatmap showing daily P&L at a glance</li>
-      <li>Distribution charts for trade outcomes</li>
-      <li>Time-of-day performance analysis</li>
-      <li>Day-of-week patterns identification</li>
-      <li>Monthly and yearly comparison charts</li>
-    </ul>
-  </div>
-  <div class="lm-box">
-    <h4><span class="neon-green">›</span> Breakdown Analysis</h4>
-    <ul>
-      <li>Performance by symbol to find your best markets</li>
-      <li>Strategy comparison to identify winning approaches</li>
-      <li>Tag-based analysis for setup performance</li>
-      <li>Position size impact analysis</li>
-      <li>Hold time correlation with profitability</li>
-    </ul>
-  </div>
-  <div class="lm-benefits">
-    <strong>⭐ Key Benefits</strong>
-    <div class="lm-benefits-grid">
-      <div class="lm-benefit-item"><span class="lm-benefit-dot">✓</span><span>Make data-driven decisions about your trading</span></div>
-      <div class="lm-benefit-item"><span class="lm-benefit-dot">✓</span><span>Identify and eliminate unprofitable patterns</span></div>
-      <div class="lm-benefit-item"><span class="lm-benefit-dot">✓</span><span>Double down on what works for you</span></div>
-      <div class="lm-benefit-item"><span class="lm-benefit-dot">✓</span><span>Track your progress over time with clear metrics</span></div>
-    </div>
-  </div>
-  <div style="display:flex; justify-content:center; gap:14px;">
-    <button class="btn-primary" style="padding:12px 28px;" onclick="document.getElementById('modalAnalytics').close(); openJournalApp();">Get Started Free</button>
-    <button class="btn-outline" style="padding:12px 28px;" onclick="document.getElementById('modalAnalytics').close()">Close</button>
-  </div>
-</dialog>
-<dialog id="modalJournaling" class="learn-modal">
-  <button class="lm-close-x" onclick="document.getElementById('modalJournaling').close()">✕</button>
-  <div class="lm-header">
-    <div class="feat-icon-box red" style="margin:0 auto 14px;">▤</div>
-    <h2 style="margin:0 0 6px; font-size:1.75rem;">Rich <span class="neon-red">Trade Journaling</span></h2>
-    <div style="color:var(--muted); font-size:0.92rem; margin-bottom:14px;">Document your trading journey comprehensively</div>
-    <p style="color:#cbd5e1; font-size:0.92rem; max-width:560px; margin:0 auto;">Transform your trading with detailed journaling that captures not just the numbers, but the story behind each trade. Our journaling system helps you understand your decision-making process and identify patterns in your trading behavior.</p>
-  </div>
-  <div class="lm-box">
-    <h4><span class="neon-red">›</span> Notes & Documentation</h4>
-    <ul>
-      <li>Rich text editor with formatting options for detailed trade notes</li>
-      <li>Pre-trade analysis templates to document your thesis</li>
-      <li>Post-trade review sections for lessons learned</li>
-      <li>Market context notes to remember market conditions</li>
-      <li>Emotional state tracking to identify psychological patterns</li>
-    </ul>
-  </div>
-  <div class="lm-box">
-    <h4><span class="neon-red">›</span> Visual Documentation</h4>
-    <ul>
-      <li>Attach unlimited screenshots to any trade</li>
-      <li>Chart markup tools to highlight key levels</li>
-      <li>Before/after comparison views</li>
-      <li>Automatic thumbnail generation for quick browsing</li>
-      <li>Drag-and-drop image upload for convenience</li>
-    </ul>
-  </div>
-  <div class="lm-box">
-    <h4><span class="neon-red">›</span> Organization & Templates</h4>
-    <ul>
-      <li>Custom tags with color coding for categorization</li>
-      <li>Strategy labels to track different trading approaches</li>
-      <li>Saved views to quickly filter your journal</li>
-      <li>Reusable templates for consistent documentation</li>
-      <li>Smart search across all your notes and tags</li>
-    </ul>
-  </div>
-  <div class="lm-benefits">
-    <strong>⭐ Key Benefits</strong>
-    <div class="lm-benefits-grid">
-      <div class="lm-benefit-item"><span class="lm-benefit-dot">✓</span><span>Learn from your past trades systematically</span></div>
-      <div class="lm-benefit-item"><span class="lm-benefit-dot">✓</span><span>Identify your most profitable setups and patterns</span></div>
-      <div class="lm-benefit-item"><span class="lm-benefit-dot">✓</span><span>Track your emotional state and its impact on trading</span></div>
-      <div class="lm-benefit-item"><span class="lm-benefit-dot">✓</span><span>Build a personal trading playbook over time</span></div>
-    </div>
-  </div>
-  <div style="display:flex; justify-content:center; gap:14px;">
-    <button class="btn-primary" style="padding:12px 28px;" onclick="document.getElementById('modalJournaling').close(); openJournalApp();">Get Started Free</button>
-    <button class="btn-outline" style="padding:12px 28px;" onclick="document.getElementById('modalJournaling').close()">Close</button>
-  </div>
-</dialog>
-<div id="appView">
-  <div class="app-shell">
-    <aside class="app-sidebar">
-      <div class="logo" style="margin-bottom:20px;"><span class="logo-icon">P2PFB</span> P2P <span class="neon-green">FX</span> <span class="neon-red">Terminal</span></div>
-      <button class="app-nav-btn active" onclick="switchAppTab('dashTab', this)">📊 Dashboard & Calendar</button>
-      <button class="app-nav-btn" onclick="switchAppTab('logTab', this)">▤ Trade Journal Log</button>
-      <button class="app-nav-btn" onclick="switchAppTab('statsTab', this)">⚡ Session & Mindset</button>
-      <div style="margin-top:auto; display:flex; flex-direction:column; gap:8px;">
-        <button class="btn-primary" style="border-radius:8px;" onclick="document.getElementById('tradeModal').showModal()">+ Add New Trade</button>
-        <button class="btn-outline" style="border-radius:8px; font-size:0.82rem;" onclick="exportJSON()">Backup JSON</button>
-        <button class="btn-outline" style="border-radius:8px; font-size:0.82rem;" onclick="closeJournalApp()">← Back to Home</button>
-      </div>
-    </aside>
 
-    <main class="app-main">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-        <div>
-          <h2 style="margin:0;">P2P FX Terminal — <span class="neon-green">Performance Dashboard</span></h2>
-          <small style="color:var(--muted);">100% Free & Private — Data stays locally in your browser</small>
-        </div>
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <select id="marketFilter" onchange="renderAll()" style="background:var(--card); color:#fff; border:1px solid var(--border); padding:9px 12px; border-radius:8px;">
-            <option value="ALL">All Markets</option>
-            <option value="Forex">Forex</option>
-            <option value="Stocks">Stocks</option>
-            <option value="F&O">F&O / Indices</option>
-            <option value="Crypto">Crypto</option>
-          </select>
-          <button class="btn-primary" style="border-radius:8px;" onclick="document.getElementById('tradeModal').showModal()">+ Log Trade</button>
-          <button class="btn-outline" style="border-radius:8px;" onclick="exportCSV()">Export CSV</button>
-          <button class="btn-outline" style="border-radius:8px;" onclick="closeJournalApp()">Home</button>
-        </div>
-      </div>
-
-      <div class="app-kpis">
-        <div class="app-card"><small style="color:var(--muted);">NET P&L</small><h2 id="kpiNet" style="margin:6px 0 0;">0.00</h2></div>
-        <div class="app-card"><small style="color:var(--muted);">WIN RATE</small><h2 id="kpiWin" style="margin:6px 0 0;">0%</h2></div>
-        <div class="app-card"><small style="color:var(--muted);">PROFIT FACTOR</small><h2 id="kpiPF" style="margin:6px 0 0;">0.00</h2></div>
-        <div class="app-card"><small style="color:var(--muted);">TOTAL TRADES</small><h2 id="kpiCount" style="margin:6px 0 0;">0</h2></div>
-      </div>
-
-      <div id="dashTab" class="app-tab">
-        <div class="app-dash-grid">
-          <div class="app-card">
-            <h4 style="margin:0 0 12px;">Cumulative Equity Curve</h4>
-            <canvas id="equityChart" height="145"></canvas>
-          </div>
-          <div class="app-card">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-              <h4 style="margin:0;">Daily P&L Calendar</h4>
-              <input type="month" id="calMonth" onchange="renderCalendar()" style="background:#060b09; color:#fff; border:1px solid var(--border); padding:4px 8px; border-radius:6px;">
-            </div>
-            <div class="cal-grid" id="calGrid"></div>
-          </div>
-        </div>
-      </div>
-
-      <div id="logTab" class="app-tab" style="display:none;">
-        <div class="app-card" style="overflow-x:auto;">
-          <h4 style="margin:0 0 12px;">Complete Trade Log</h4>
-          <table>
-            <thead><tr><th>Date</th><th>Market</th><th>Symbol</th><th>Side</th><th>Entry</th><th>Exit</th><th>Qty/Lots</th><th>Session</th><th>Setup</th><th>Emotion</th><th>Net P&L</th><th></th></tr></thead>
-            <tbody id="tradeTableBody"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div id="statsTab" class="app-tab" style="display:none;">
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:16px;">
-          <div class="app-card"><h4>P&L by Session</h4><div id="sessionStats"></div></div>
-          <div class="app-card"><h4>P&L by Setup Tag</h4><div id="setupStats"></div></div>
-          <div class="app-card"><h4>P&L by Emotion</h4><div id="emotionStats"></div></div>
-        </div>
-      </div>
-    </main>
-  </div>
-</div>
-
-<dialog id="tradeModal" class="trade-modal">
-  <div style="display:flex; justify-content:space-between; align-items:center;">
-    <h3 style="margin:0;">Log New Trade</h3>
-    <button class="btn-outline" style="padding:4px 10px;" onclick="document.getElementById('tradeModal').close()">✕</button>
-  </div>
-  <form id="tradeForm" class="modal-grid">
-    <input type="date" id="tDate" required>
-    <select id="tMarket">
-      <option value="Forex">Forex</option>
-      <option value="Stocks">Stocks</option>
-      <option value="F&O">F&O / Indices</option>
-      <option value="Crypto">Crypto</option>
-    </select>
-    <input type="text" id="tSymbol" placeholder="Symbol (e.g. XAUUSD, NIFTY)" required>
-    <select id="tSide"><option value="Long">Long</option><option value="Short">Short</option></select>
-    <input type="number" step="any" id="tEntry" placeholder="Entry Price" required>
-    <input type="number" step="any" id="tExit" placeholder="Exit Price" required>
-    <input type="number" step="any" id="tQty" placeholder="Qty / Lots / Units" required>
-    <input type="number" step="any" id="tFees" placeholder="Fees / Swap (0)" value="0">
-    <select id="tSession">
-      <option value="London">London Session</option>
-      <option value="New York">New York Session</option>
-      <option value="Asian">Asian Session</option>
-      <option value="NSE/BSE">Indian Market</option>
-      <option value="Crypto 24/7">Crypto 24/7</option>
-    </select>
-    <input type="text" id="tSetup" placeholder="Setup (e.g. Breakout)">
-    <select id="tEmotion">
-      <option value="Disciplined">Disciplined</option>
-      <option value="FOMO">FOMO</option>
-      <option value="Revenge">Revenge</option>
-      <option value="Hesitant">Hesitant</option>
-    </select>
-    <textarea id="tNotes" style="grid-column:1/-1;" rows="2" placeholder="Trade notes & lessons..."></textarea>
-    <button type="submit" class="btn-primary" style="grid-column:1/-1; border-radius:8px;">Save Trade</button>
-  </form>
-</dialog>
-<script>
-  let trades = JSON.parse(localStorage.getItem('p2p_fx_terminal_trades')) || [];
-  let eqChart = null;
-  const now = new Date();
-  document.getElementById('tDate').valueAsDate = now;
-  document.getElementById('calMonth').value = now.toISOString().slice(0, 7);
-
-      function openJournalApp() {
-    window.location.href = 'auth.html';
-  }
-  function closeJournalApp() {
-    window.location.href = 'index.html';
-  }
-
-  // Auto-open journal when redirected back from auth.html after OTP verification
-  if (new URLSearchParams(window.location.search).get('journal') === '1' && localStorage.getItem('p2p_fx_session')) {
-    openJournalApp();
-  }
-  function switchAppTab(id, btn) {
-    document.querySelectorAll('.app-tab').forEach(el => el.style.display = 'none');
-    document.querySelectorAll('.app-nav-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById(id).style.display = 'block';
-    btn.classList.add('active');
-  }
-
-  document.getElementById('tradeForm').addEventListener('submit', e => {
-    e.preventDefault();
-    const side = document.getElementById('tSide').value;
-    const entry = parseFloat(document.getElementById('tEntry').value);
-    const exit = parseFloat(document.getElementById('tExit').value);
-    const qty = parseFloat(document.getElementById('tQty').value);
-    const fees = parseFloat(document.getElementById('tFees').value) || 0;
-    const pnl = (side === 'Long' ? (exit - entry) * qty : (entry - exit) * qty) - fees;
-
-    trades.push({
-      id: Date.now(),
-      date: document.getElementById('tDate').value,
-      market: document.getElementById('tMarket').value,
-      symbol: document.getElementById('tSymbol').value.toUpperCase(),
-      side, entry, exit, qty, fees, pnl,
-      session: document.getElementById('tSession').value,
-      setup: document.getElementById('tSetup').value || 'General',
-      emotion: document.getElementById('tEmotion').value,
-      notes: document.getElementById('tNotes').value || '-'
-    });
-    trades.sort((a, b) => new Date(a.date) - new Date(b.date));
-    localStorage.setItem('p2p_fx_terminal_trades', JSON.stringify(trades));
-    e.target.reset();
-    document.getElementById('tDate').valueAsDate = new Date();
-    document.getElementById('tradeModal').close();
-    renderAll();
-  });
-
-  function deleteTrade(id) {
-    trades = trades.filter(t => t.id !== id);
-    localStorage.setItem('p2p_fx_terminal_trades', JSON.stringify(trades));
-    renderAll();
-  }
-
-  function renderAll() {
-    const f = document.getElementById('marketFilter').value;
-    const data = f === 'ALL' ? trades : trades.filter(t => t.market === f);
-    let net = 0, wins = 0, gWin = 0, gLoss = 0, run = 0;
-    const pts = [], lbls = ['Start'];
-
-    data.forEach(t => {
-      net += t.pnl; run += t.pnl;
-      if (t.pnl > 0) { wins++; gWin += t.pnl; } else if (t.pnl < 0) { gLoss += Math.abs(t.pnl); }
-      pts.push(run.toFixed(2)); lbls.push(t.date);
-    });
-
-    const netEl = document.getElementById('kpiNet');
-    netEl.innerText = net.toFixed(2);
-    netEl.className = net >= 0 ? 'win' : 'loss';
-    document.getElementById('kpiWin').innerText = data.length ? ((wins / data.length) * 100).toFixed(1) + '%' : '0%';
-    document.getElementById('kpiPF').innerText = gLoss > 0 ? (gWin / gLoss).toFixed(2) : (gWin > 0 ? '∞' : '0.00');
-    document.getElementById('kpiCount').innerText = data.length;
-
-    const lineColor = net >= 0 ? '#00ff88' : '#ff2a5f';
-    const fillColor = net >= 0 ? 'rgba(0, 255, 136, 0.14)' : 'rgba(255, 42, 95, 0.14)';
-    const ctx = document.getElementById('equityChart').getContext('2d');
-    if (eqChart) eqChart.destroy();
-    eqChart = new Chart(ctx, {
-      type: 'line',
-      data: { labels: lbls, datasets: [{ data: pts, borderColor: lineColor, backgroundColor: fillColor, fill: true, tension: 0.25 }] },
-      options: { plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#94a3b8' } }, y: { ticks: { color: '#94a3b8' } } } }
-    });
-
-    document.getElementById('tradeTableBody').innerHTML = [...data].reverse().map(t => `
-      <tr>
-        <td>${t.date}</td><td>${t.market}</td><td><strong>${t.symbol}</strong></td><td>${t.side}</td>
-        <td>${t.entry}</td><td>${t.exit}</td><td>${t.qty}</td><td>${t.session}</td><td>${t.setup}</td><td>${t.emotion}</td>
-        <td class="${t.pnl >= 0 ? 'win' : 'loss'}">${t.pnl.toFixed(2)}</td>
-        <td><button class="btn-outline" style="padding:3px 8px; color:var(--loss);" onclick="deleteTrade(${t.id})">✕</button></td>
-      </tr>`).join('');
-
-    const sumBy = key => {
-      const m = {};
-      data.forEach(t => m[t[key]] = (m[t[key]] || 0) + t.pnl);
-      return Object.entries(m).map(([k, v]) => `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);"><span>${k}</span><strong class="${v>=0?'win':'loss'}">${v.toFixed(2)}</strong></div>`).join('') || '<small style="color:var(--muted);">No trades logged</small>';
-    };
-    document.getElementById('sessionStats').innerHTML = sumBy('session');
-    document.getElementById('setupStats').innerHTML = sumBy('setup');
-    document.getElementById('emotionStats').innerHTML = sumBy('emotion');
-    renderCalendar();
-  }
-
-  function renderCalendar() {
-    const grid = document.getElementById('calGrid');
-    const mv = document.getElementById('calMonth').value;
-    if (!mv) return;
-    const [y, m] = mv.split('-').map(Number);
-    const days = new Date(y, m, 0).getDate();
-    const first = new Date(y, m - 1, 1).getDay();
-    const map = {};
-    trades.forEach(t => { if (t.date.startsWith(mv)) map[t.date] = (map[t.date] || 0) + t.pnl; });
-
-    grid.innerHTML = ['S','M','T','W','T','F','S'].map(d => `<small style="color:var(--muted);">${d}</small>`).join('');
-    for (let i = 0; i < first; i++) grid.innerHTML += '<div></div>';
-    for (let d = 1; d <= days; d++) {
-      const ds = `${mv}-${String(d).padStart(2, '0')}`;
-      const val = map[ds];
-      const cls = val === undefined ? 'cal-cell' : (val >= 0 ? 'cal-cell win-day' : 'cal-cell loss-day');
-      grid.innerHTML += `<div class="${cls}"><span style="color:var(--muted);text-align:left;">${d}</span>${val !== undefined ? `<strong class="${val>=0?'win':'loss'}">${val>=0?'+':''}${val.toFixed(0)}</strong>` : ''}</div>`;
+  <script>
+    function openJournalApp() {
+      window.location.href = 'auth.html';
     }
-  }
-
-  function exportCSV() {
-    const rows = ['Date,Market,Symbol,Side,Entry,Exit,Qty,Session,Setup,Emotion,Net_PnL'].concat(
-      trades.map(t => `${t.date},${t.market},${t.symbol},${t.side},${t.entry},${t.exit},${t.qty},${t.session},"${t.setup}",${t.emotion},${t.pnl.toFixed(2)}`)
-    );
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv' }));
-    a.download = 'p2p-fx-terminal-journal.csv';
-    a.click();
-  }
-
-  function exportJSON() {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(trades, null, 2)], { type: 'application/json' }));
-    a.download = 'p2p-fx-terminal-backup.json';
-    a.click();
-  }
-</script>
+  </script>
 </body>
 </html>
