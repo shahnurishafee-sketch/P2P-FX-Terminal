@@ -294,25 +294,671 @@
       </div>
     </section>
 
-    <!-- 7. BACKTESTING (BAR REPLAY — FREE FOR 7 DAYS) -->
+        <!-- 7. TRADINGVIEW BAR REPLAY & PRO CHARTING BACKTESTER -->
     <section id="v-backtest" class="view">
-      <div class="card">
-        <div class="card-h">
-          <div><span>Strategy Backtesting (Bar Replay)</span> <span id="btBadge" class="tag-r" style="margin-left:8px;">7-Day Free Trial</span></div>
-          <div>Sim P&L: <strong id="btPnl" class="win">+$0.00</strong></div>
+      <div class="card" style="padding:12px;">
+        <!-- Row 1: Symbol, All Timeframes (1m to 1D), Live OHLC Data & Bar Replay -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:8px;">
+          <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+            <select id="btSym" onchange="initBtSymbol()" style="width:auto; margin:0; padding:5px 10px; font-weight:800;">
+              <option value="XAUUSD">XAUUSD (Gold)</option>
+              <option value="EURUSD">EURUSD</option>
+              <option value="GBPUSD">GBPUSD</option>
+              <option value="BTCUSD">BTCUSD</option>
+              <option value="NIFTY">NIFTY 50</option>
+            </select>
+            <!-- Timeframes 1m to 1D -->
+            <div id="btTfBar" style="display:flex; gap:3px; background:var(--bg); padding:3px; border-radius:7px; border:1px solid var(--border);">
+              <button type="button" class="btn-o" style="padding:3px 7px; font-size:0.74rem;" onclick="setBtTf('1m', this)">1m</button>
+              <button type="button" class="btn-o" style="padding:3px 7px; font-size:0.74rem;" onclick="setBtTf('3m', this)">3m</button>
+              <button type="button" class="btn-o" style="padding:3px 7px; font-size:0.74rem;" onclick="setBtTf('5m', this)">5m</button>
+              <button type="button" class="btn-g" style="padding:3px 7px; font-size:0.74rem;" onclick="setBtTf('15m', this)">15m</button>
+              <button type="button" class="btn-o" style="padding:3px 7px; font-size:0.74rem;" onclick="setBtTf('30m', this)">30m</button>
+              <button type="button" class="btn-o" style="padding:3px 7px; font-size:0.74rem;" onclick="setBtTf('1H', this)">1H</button>
+              <button type="button" class="btn-o" style="padding:3px 7px; font-size:0.74rem;" onclick="setBtTf('4H', this)">4H</button>
+              <button type="button" class="btn-o" style="padding:3px 7px; font-size:0.74rem;" onclick="setBtTf('1D', this)">1D</button>
+            </div>
+            <span id="btLivePrice" class="tag-g" style="font-family:monospace; font-size:0.86rem; padding:5px 10px;">2648.90</span>
+            <span id="btBadge" class="tag-r">7-Day Free Trial</span>
+          </div>
+
+          <!-- TradingView Bar Replay Bar -->
+          <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap; background:var(--bg); padding:4px 8px; border-radius:8px; border:1px solid var(--border);">
+            <small style="color:var(--green); font-weight:800;">⏪ REPLAY</small>
+            <button type="button" id="btPlayBtn" class="btn-g" style="padding:4px 10px; font-size:0.76rem;" onclick="togglePlay()">▶ Play</button>
+            <button type="button" class="btn-o" style="padding:4px 9px; font-size:0.76rem;" onclick="stepBar()">⏭ +1 Bar</button>
+            <select id="btSpeed" onchange="updateBtSpeed()" style="width:auto; margin:0; padding:3px 6px; font-size:0.75rem;">
+              <option value="1000">1x</option>
+              <option value="500">2x</option>
+              <option value="250">4x</option>
+            </select>
+            <button type="button" class="btn-o" style="padding:4px 9px; font-size:0.76rem;" onclick="resetBt()">↺ Reset</button>
+          </div>
         </div>
-        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:center;">
-          <select id="btSym" style="width:auto; margin:0;"><option>XAUUSD</option><option>EURUSD</option><option>BTCUSD</option><option>NIFTY</option></select>
-          <select id="btTf" style="width:auto; margin:0;"><option>15m</option><option>5m</option><option>1H</option><option>4H</option></select>
-          <button class="btn-g" onclick="togglePlay()">⏯ Play / Pause</button>
-          <button class="btn-o" onclick="stepBar()">⏭ Step +1 Bar</button>
-          <button class="btn-o" onclick="resetBt()">↺ Reset</button>
-          <button class="btn-g" onclick="btOrder('BUY')">Buy Market</button>
-          <button class="btn-r" onclick="btOrder('SELL')">Sell Market</button>
+
+        <!-- Row 2: TradingView Free Tools (Fib Retracement, Fixed Volume Profile, Trendline, H-Line, EMA) & Trade Execution -->
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px; background:var(--bg); padding:7px 10px; border-radius:8px; border:1px solid var(--border);">
+          <div id="btToolBar" style="display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
+            <button type="button" class="btn-g" style="padding:4px 8px; font-size:0.74rem;" onclick="setBtTool('cross', this)">✛ Crosshair</button>
+            <button type="button" class="btn-o" style="padding:4px 8px; font-size:0.74rem;" onclick="setBtTool('hline', this)">— H-Line</button>
+            <button type="button" class="btn-o" style="padding:4px 8px; font-size:0.74rem;" onclick="setBtTool('trend', this)">╱ Trendline</button>
+            <button type="button" class="btn-o" style="padding:4px 8px; font-size:0.74rem;" onclick="setBtTool('fib', this)">📐 Fib Retracement</button>
+            <button type="button" class="btn-o" style="padding:4px 8px; font-size:0.74rem;" onclick="setBtTool('vp', this)">📊 Fixed Vol Profile</button>
+            <button type="button" id="emaBtn" class="btn-o" style="padding:4px 8px; font-size:0.74rem;" onclick="toggleEma()">EMA 20/50</button>
+            <button type="button" class="btn-o" style="padding:4px 8px; font-size:0.74rem;" onclick="clearBtDrawings()">🗑 Clear</button>
+          </div>
+
+          <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
+            <small style="color:var(--muted);">Lots:</small>
+            <input type="number" id="btLots" value="0.10" step="0.01" min="0.01" style="width:60px; margin:0; padding:4px 6px; font-size:0.78rem;">
+            <small style="color:var(--muted);">SL:</small>
+            <input type="number" id="btSlPts" value="5" step="0.5" style="width:52px; margin:0; padding:4px 6px; font-size:0.78rem;">
+            <small style="color:var(--muted);">TP:</small>
+            <input type="number" id="btTpPts" value="12" step="0.5" style="width:52px; margin:0; padding:4px 6px; font-size:0.78rem;">
+            <button type="button" class="btn-g" style="padding:5px 12px; font-size:0.78rem;" onclick="btOrder('BUY')">BUY</button>
+            <button type="button" class="btn-r" style="padding:5px 12px; font-size:0.78rem;" onclick="btOrder('SELL')">SELL</button>
+          </div>
         </div>
-        <canvas id="btCvs" width="800" height="230" style="width:100%; background:var(--bg); border:1px solid var(--border); border-radius:10px;"></canvas>
+
+        <!-- Live OHLCV Data Legend Bar (Like TradingView Top-Left Legend) -->
+        <div id="btOhlcLegend" style="font-family:monospace; font-size:0.76rem; color:var(--muted); margin-bottom:6px; display:flex; gap:14px; flex-wrap:wrap;">
+          <span>O: <strong id="lgO" style="color:var(--text);">—</strong></span>
+          <span>H: <strong id="lgH" class="win">—</strong></span>
+          <span>L: <strong id="lgL" class="loss">—</strong></span>
+          <span>C: <strong id="lgC" style="color:var(--text);">—</strong></span>
+          <span>Vol: <strong id="lgV" style="color:var(--text);">—</strong></span>
+          <span id="btToolHint" style="color:var(--green);">Tip: Select Fib Retracement or Fixed Vol Profile, then click 2 points on the chart.</span>
+        </div>
+
+        <!-- Main Chart Canvas -->
+        <canvas id="btCvs" width="980" height="390" style="width:100%; height:390px; background:#050a08; border:1px solid var(--border); border-radius:10px; cursor:crosshair; display:block;"></canvas>
+
+        <!-- Account Summary Strip -->
+        <div class="g4" style="margin-top:10px; margin-bottom:10px;">
+          <div class="mini"><small>BACKTEST EQUITY</small><strong id="btBal">$10,000.00</strong></div>
+          <div class="mini"><small>OPEN POSITION P&L</small><strong id="btFloat">$0.00</strong></div>
+          <div class="mini"><small>REALIZED NET P&L</small><strong id="btPnl" class="win">+$0.00</strong></div>
+          <div class="mini"><small>WIN RATE / TRADES</small><strong id="btStats">0% (0 trades)</strong></div>
+        </div>
+
+        <!-- Active Position Strip -->
+        <div id="btOpenBox" style="display:none; background:rgba(0,255,136,0.08); border:1px solid var(--green); border-radius:8px; padding:9px 12px; margin-bottom:10px; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+          <div id="btOpenInfo" style="font-size:0.84rem;"></div>
+          <button type="button" class="btn-r" style="padding:5px 12px; font-size:0.76rem;" onclick="closeBtPos('Manual Close')">Close Position @ Market</button>
+        </div>
+
+        <!-- Detailed Backtest Trade History Table -->
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>SYMBOL / TF</th>
+                <th>SIDE</th>
+                <th>LOTS</th>
+                <th>ENTRY PRICE</th>
+                <th>EXIT PRICE</th>
+                <th>SL / TP</th>
+                <th>POINTS</th>
+                <th>EXIT REASON</th>
+                <th>NET PROFIT / LOSS</th>
+              </tr>
+            </thead>
+            <tbody id="btHistoryBody">
+              <tr><td colspan="10" style="text-align:center; color:var(--muted); padding:14px;">No backtest trades yet. Use Play or +1 Bar and click BUY or SELL.</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
+  var btTimer = null;
+  var btSpeedMs = 1000;
+  var btActiveTf = '15m';
+  var btTool = 'cross';
+  var btShowEma = true;
+  var btDrawings = new Array();
+  var btPendingPt = null;
+  var btMouse = null;
+
+  var btBars = new Array();
+  var btPos = null;
+  var btNet = 0;
+  var btClosedList = new Array();
+
+  var symConfigs = {
+    XAUUSD: { base: 2648.50, step: 2.8, dec: 2, mult: 100 },
+    EURUSD: { base: 1.08450, step: 0.0009, dec: 5, mult: 100000 },
+    GBPUSD: { base: 1.26820, step: 0.0011, dec: 5, mult: 100000 },
+    BTCUSD: { base: 91450.0, step: 180.0, dec: 1, mult: 1 },
+    NIFTY:  { base: 24350.0, step: 28.0, dec: 1, mult: 25 }
+  };
+
+  var tfMultipliers = { '1m': 0.35, '3m': 0.55, '5m': 0.75, '15m': 1.0, '30m': 1.35, '1H': 1.8, '4H': 2.8, '1D': 4.5 };
+
+  function makeNextCandle(prevClose, cfg, tfMult) {
+    var volRange = cfg.step * tfMult;
+    var o = prevClose;
+    var change = (Math.random() - 0.485) * volRange * 2;
+    var c = +(o + change).toFixed(cfg.dec);
+    var wickUp = Math.random() * volRange * 0.9;
+    var wickDn = Math.random() * volRange * 0.9;
+    var h = +(Math.max(o, c) + wickUp).toFixed(cfg.dec);
+    var l = +(Math.min(o, c) - wickDn).toFixed(cfg.dec);
+    var v = Math.floor(120 + Math.random() * 980 * tfMult);
+    return { o: o, h: h, l: l, c: c, v: v };
+  }
+
+  function initBtSymbol() {
+    if (btTimer) { clearInterval(btTimer); btTimer = null; }
+    var playBtn = document.getElementById('btPlayBtn');
+    if (playBtn) playBtn.textContent = '▶ Play';
+
+    var sym = document.getElementById('btSym') ? document.getElementById('btSym').value : 'XAUUSD';
+    var cfg = symConfigs[sym] || symConfigs.XAUUSD;
+    var tfMult = tfMultipliers[btActiveTf] || 1.0;
+
+    btBars = new Array();
+    var price = cfg.base;
+    for (var i = 0; i < 42; i++) {
+      var bar = makeNextCandle(price, cfg, tfMult);
+      btBars.push(bar);
+      price = bar.c;
+    }
+    btDrawings = new Array();
+    btPendingPt = null;
+    btPos = null;
+    updateBtUi();
+    drawBt();
+  }
+
+  function setBtTf(tf, btn) {
+    btActiveTf = tf;
+    var btns = document.querySelectorAll('#btTfBar button');
+    for (var i = 0; i < btns.length; i++) btns[i].className = 'btn-o';
+    if (btn) btn.className = 'btn-g';
+    initBtSymbol();
+  }
+
+  function setBtTool(tool, btn) {
+    btTool = tool;
+    btPendingPt = null;
+    var btns = document.querySelectorAll('#btToolBar button');
+    for (var i = 0; i < btns.length; i++) {
+      if (btns[i].id !== 'emaBtn') btns[i].className = 'btn-o';
+    }
+    if (btn) btn.className = 'btn-g';
+    var hints = {
+      cross: 'Crosshair active — hover over any candle to inspect exact OHLCV & price.',
+      hline: 'Horizontal Line — click anywhere on the chart to place a price level.',
+      trend: 'Trendline — click start point, then click end point.',
+      fib: 'Fib Retracement — click swing high/low, then click second swing point.',
+      vp: 'Fixed Range Volume Profile — click left bar, then click right bar to compute POC & VAH/VAL.'
+    };
+    var hEl = document.getElementById('btToolHint');
+    if (hEl) hEl.textContent = hints[tool] || '';
+    drawBt();
+  }
+
+  function toggleEma() {
+    btShowEma = !btShowEma;
+    var b = document.getElementById('emaBtn');
+    if (b) b.className = btShowEma ? 'btn-g' : 'btn-o';
+    drawBt();
+  }
+
+  function clearBtDrawings() {
+    btDrawings = new Array();
+    btPendingPt = null;
+    drawBt();
+  }
+  function getBtScale(c) {
+    var padR = 76, padT = 18, padB = 26, padL = 12;
+    var minP = Infinity, maxP = -Infinity;
+    for (var i = 0; i < btBars.length; i++) {
+      if (btBars[i].l < minP) minP = btBars[i].l;
+      if (btBars[i].h > maxP) maxP = btBars[i].h;
+    }
+    if (btPos) {
+      minP = Math.min(minP, btPos.entry, btPos.sl, btPos.tp);
+      maxP = Math.max(maxP, btPos.entry, btPos.sl, btPos.tp);
+    }
+    var range = (maxP - minP) || 1;
+    minP -= range * 0.08;
+    maxP += range * 0.08;
+    var plotW = c.width - padL - padR;
+    var plotH = c.height - padT - padB;
+    return {
+      padL: padL, padR: padR, padT: padT, padB: padB,
+      plotW: plotW, plotH: plotH, minP: minP, maxP: maxP,
+      priceToY: function(p) { return padT + ((maxP - p) / (maxP - minP)) * plotH; },
+      yToPrice: function(y) { return maxP - ((y - padT) / plotH) * (maxP - minP); },
+      idxToX: function(idx) { return padL + (idx + 0.5) * (plotW / btBars.length); },
+      xToIdx: function(x) { return Math.max(0, Math.min(btBars.length - 1, Math.floor((x - padL) / (plotW / btBars.length)))); }
+    };
+  }
+
+  function calcEmaSeries(period) {
+    var k = 2 / (period + 1);
+    var res = new Array();
+    var ema = btBars.length ? btBars[0].c : 0;
+    for (var i = 0; i < btBars.length; i++) {
+      ema = i === 0 ? btBars[i].c : btBars[i].c * k + ema * (1 - k);
+      res.push(ema);
+    }
+    return res;
+  }
+
+  function drawBt() {
+    var c = document.getElementById('btCvs');
+    if (!c || !btBars.length) return;
+    var ctx = c.getContext('2d');
+    var sym = document.getElementById('btSym') ? document.getElementById('btSym').value : 'XAUUSD';
+    var cfg = symConfigs[sym] || symConfigs.XAUUSD;
+    var sc = getBtScale(c);
+
+    ctx.clearRect(0, 0, c.width, c.height);
+
+    // 1. Grid & Right-Side TradingView Price Scale
+    ctx.strokeStyle = '#13221c';
+    ctx.lineWidth = 1;
+    ctx.font = '11px monospace';
+    for (var g = 0; g <= 6; g++) {
+      var gy = sc.padT + (g / 6) * sc.plotH;
+      var gp = sc.yToPrice(gy);
+      ctx.beginPath();
+      ctx.moveTo(sc.padL, gy);
+      ctx.lineTo(c.width - sc.padR, gy);
+      ctx.stroke();
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText(gp.toFixed(cfg.dec), c.width - sc.padR + 6, gy + 4);
+    }
+
+    // 2. Volume Bars at Bottom + OHLC Candlesticks
+    var barW = sc.plotW / btBars.length;
+    var maxVol = Math.max.apply(null, btBars.map(function(b) { return b.v; })) || 1;
+    for (var i = 0; i < btBars.length; i++) {
+      var b = btBars[i];
+      var x = sc.idxToX(i);
+      var up = b.c >= b.o;
+      var col = up ? '#00ff88' : '#ff2a5f';
+
+      // Volume bar
+      var vh = (b.v / maxVol) * 44;
+      ctx.fillStyle = up ? 'rgba(0,255,136,0.16)' : 'rgba(255,42,95,0.16)';
+      ctx.fillRect(x - barW * 0.34, c.height - sc.padB - vh, barW * 0.68, vh);
+
+      // Wick
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(x, sc.priceToY(b.h));
+      ctx.lineTo(x, sc.priceToY(b.l));
+      ctx.stroke();
+
+      // Body
+      var yO = sc.priceToY(b.o), yC = sc.priceToY(b.c);
+      ctx.fillStyle = col;
+      ctx.fillRect(x - barW * 0.32, Math.min(yO, yC), Math.max(3, barW * 0.64), Math.max(2, Math.abs(yC - yO)));
+    }
+
+    // 3. EMA 20 & EMA 50 Overlays
+    if (btShowEma) {
+      var e20 = calcEmaSeries(20), e50 = calcEmaSeries(50);
+      var pairs = new Array({ arr: e20, color: '#38bdf8' }, { arr: e50, color: '#f59e0b' });
+      for (var p = 0; p < pairs.length; p++) {
+        ctx.strokeStyle = pairs[p].color;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        for (var k = 0; k < pairs[p].arr.length; k++) {
+          var ex = sc.idxToX(k), ey = sc.priceToY(pairs[p].arr[k]);
+          if (k === 0) ctx.moveTo(ex, ey); else ctx.lineTo(ex, ey);
+        }
+        ctx.stroke();
+      }
+    }
+
+    // 4. Render Drawings: H-Line, Trendline, Fib Retracement & Fixed Range Volume Profile
+    for (var d = 0; d < btDrawings.length; d++) {
+      var dr = btDrawings[d];
+      if (dr.type === 'hline') {
+        var hy = sc.priceToY(dr.p1);
+        ctx.strokeStyle = '#38bdf8';
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath(); ctx.moveTo(sc.padL, hy); ctx.lineTo(c.width - sc.padR, hy); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillText(dr.p1.toFixed(cfg.dec), sc.padL + 6, hy - 4);
+      } else if (dr.type === 'trend') {
+        ctx.strokeStyle = '#a855f7';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(sc.idxToX(dr.i1), sc.priceToY(dr.p1));
+        ctx.lineTo(sc.idxToX(dr.i2), sc.priceToY(dr.p2));
+        ctx.stroke();
+      } else if (dr.type === 'fib') {
+        var fibLevels = new Array(0, 0.236, 0.382, 0.5, 0.618, 0.786, 1);
+        var fibColors = new Array('#94a3b8', '#ef4444', '#f59e0b', '#10b981', '#00ff88', '#38bdf8', '#94a3b8');
+        var xStart = Math.min(sc.idxToX(dr.i1), sc.idxToX(dr.i2));
+        var xEnd = Math.max(sc.idxToX(dr.i1), sc.idxToX(dr.i2), xStart + 140);
+        for (var f = 0; f < fibLevels.length; f++) {
+          var lvl = fibLevels[f];
+          var fp = dr.p1 + (dr.p2 - dr.p1) * lvl;
+          var fy = sc.priceToY(fp);
+          ctx.strokeStyle = fibColors[f];
+          ctx.lineWidth = lvl === 0.618 || lvl === 0.5 ? 1.6 : 1;
+          ctx.beginPath(); ctx.moveTo(xStart, fy); ctx.lineTo(xEnd, fy); ctx.stroke();
+          ctx.fillStyle = fibColors[f];
+          ctx.fillText(lvl + ' (' + fp.toFixed(cfg.dec) + ')', xStart + 4, fy - 3);
+        }
+      } else if (dr.type === 'vp') {
+        var iMin = Math.min(dr.i1, dr.i2), iMax = Math.max(dr.i1, dr.i2);
+        var lo = Infinity, hi = -Infinity;
+        for (var vi = iMin; vi <= iMax; vi++) {
+          if (btBars[vi].l < lo) lo = btBars[vi].l;
+          if (btBars[vi].h > hi) hi = btBars[vi].h;
+        }
+        var rows = 14, stepP = ((hi - lo) || 1) / rows;
+        var bins = new Array();
+        for (var r = 0; r < rows; r++) bins.push(0);
+        for (var vj = iMin; vj <= iMax; vj++) {
+          var mid = (btBars[vj].h + btBars[vj].l) / 2;
+          var binIdx = Math.max(0, Math.min(rows - 1, Math.floor((mid - lo) / stepP)));
+          bins[binIdx] += btBars[vj].v;
+        }
+        var maxBin = Math.max.apply(null, bins) || 1;
+        var pocIdx = bins.indexOf(maxBin);
+        var vpX = sc.idxToX(iMin);
+        var vpMaxW = Math.max(60, sc.idxToX(iMax) - vpX);
+        for (var br = 0; br < rows; br++) {
+          var byTop = sc.priceToY(lo + (br + 1) * stepP);
+          var byBot = sc.priceToY(lo + br * stepP);
+          var bw = (bins[br] / maxBin) * vpMaxW;
+          ctx.fillStyle = br === pocIdx ? 'rgba(255, 42, 95, 0.55)' : 'rgba(56, 189, 248, 0.28)';
+          ctx.fillRect(vpX, byTop, bw, Math.max(2, byBot - byTop - 1));
+        }
+        var pocPrice = lo + (pocIdx + 0.5) * stepP;
+        var pocY = sc.priceToY(pocPrice);
+        ctx.strokeStyle = '#ff2a5f';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath(); ctx.moveTo(vpX, pocY); ctx.lineTo(sc.idxToX(iMax), pocY); ctx.stroke();
+        ctx.fillStyle = '#ff2a5f';
+        ctx.fillText('POC ' + pocPrice.toFixed(cfg.dec), vpX + 4, pocY - 3);
+      }
+    }
+
+    // 5. Active Position Entry, Stop-Loss & Take-Profit Lines on Chart
+    if (btPos) {
+      var lines = new Array(
+        { p: btPos.entry, col: '#38bdf8', lbl: btPos.dir + ' ENTRY ' + btPos.entry.toFixed(cfg.dec) },
+        { p: btPos.sl, col: '#ff2a5f', lbl: 'SL ' + btPos.sl.toFixed(cfg.dec) },
+        { p: btPos.tp, col: '#00ff88', lbl: 'TP ' + btPos.tp.toFixed(cfg.dec) }
+      );
+      for (var li = 0; li < lines.length; li++) {
+        var ly = sc.priceToY(lines[li].p);
+        ctx.strokeStyle = lines[li].col;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.moveTo(sc.padL, ly); ctx.lineTo(c.width - sc.padR, ly); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = lines[li].col;
+        ctx.fillText(lines[li].lbl, sc.padL + 8, ly - 4);
+      }
+    }
+
+    // 6. Live Last-Price Tag + Crosshair
+    var lastBar = btBars[btBars.length - 1];
+    var lastY = sc.priceToY(lastBar.c);
+    ctx.fillStyle = lastBar.c >= lastBar.o ? '#00ff88' : '#ff2a5f';
+    ctx.fillRect(c.width - sc.padR + 2, lastY - 9, sc.padR - 4, 18);
+    ctx.fillStyle = '#040706';
+    ctx.font = 'bold 11px monospace';
+    ctx.fillText(lastBar.c.toFixed(cfg.dec), c.width - sc.padR + 6, lastY + 4);
+
+    if (btMouse) {
+      ctx.strokeStyle = 'rgba(248, 250, 252, 0.35)';
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(btMouse.x, sc.padT); ctx.lineTo(btMouse.x, c.height - sc.padB); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(sc.padL, btMouse.y); ctx.lineTo(c.width - sc.padR, btMouse.y); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+  (function bindBtCanvasEvents() {
+    var c = document.getElementById('btCvs');
+    if (!c) return;
+
+    c.addEventListener('mousemove', function(e) {
+      if (!btBars.length) return;
+      var rect = c.getBoundingClientRect();
+      var x = (e.clientX - rect.left) * (c.width / rect.width);
+      var y = (e.clientY - rect.top) * (c.height / rect.height);
+      btMouse = { x: x, y: y };
+
+      var sc = getBtScale(c);
+      var idx = sc.xToIdx(x);
+      var b = btBars[idx];
+      var sym = document.getElementById('btSym') ? document.getElementById('btSym').value : 'XAUUSD';
+      var cfg = symConfigs[sym] || symConfigs.XAUUSD;
+      if (b) {
+        if (document.getElementById('lgO')) document.getElementById('lgO').textContent = b.o.toFixed(cfg.dec);
+        if (document.getElementById('lgH')) document.getElementById('lgH').textContent = b.h.toFixed(cfg.dec);
+        if (document.getElementById('lgL')) document.getElementById('lgL').textContent = b.l.toFixed(cfg.dec);
+        if (document.getElementById('lgC')) document.getElementById('lgC').textContent = b.c.toFixed(cfg.dec);
+        if (document.getElementById('lgV')) document.getElementById('lgV').textContent = b.v;
+      }
+      drawBt();
+    });
+
+    c.addEventListener('mouseleave', function() {
+      btMouse = null;
+      drawBt();
+    });
+
+    c.addEventListener('click', function(e) {
+      if (!btBars.length || btTool === 'cross') return;
+      var rect = c.getBoundingClientRect();
+      var x = (e.clientX - rect.left) * (c.width / rect.width);
+      var y = (e.clientY - rect.top) * (c.height / rect.height);
+      var sc = getBtScale(c);
+      var idx = sc.xToIdx(x);
+      var price = sc.yToPrice(y);
+
+      if (btTool === 'hline') {
+        btDrawings.push({ type: 'hline', p1: price });
+        drawBt();
+        return;
+      }
+
+      if (!btPendingPt) {
+        btPendingPt = { i1: idx, p1: price };
+        var hEl = document.getElementById('btToolHint');
+        if (hEl) hEl.textContent = 'First point locked — now click the second point on the chart!';
+      } else {
+        btDrawings.push({
+          type: btTool,
+          i1: btPendingPt.i1,
+          p1: btPendingPt.p1,
+          i2: idx,
+          p2: price
+        });
+        btPendingPt = null;
+        setBtTool('cross', document.querySelector('#btToolBar button'));
+        drawBt();
+      }
+    });
+  })();
+
+  function togglePlay() {
+    if (!isPro) { go('sub'); return; }
+    var btn = document.getElementById('btPlayBtn');
+    if (btTimer) {
+      clearInterval(btTimer);
+      btTimer = null;
+      if (btn) btn.textContent = '▶ Play';
+    } else {
+      btTimer = setInterval(stepBar, btSpeedMs);
+      if (btn) btn.textContent = '⏸ Pause';
+    }
+  }
+
+  function updateBtSpeed() {
+    btSpeedMs = parseInt(document.getElementById('btSpeed').value, 10) || 1000;
+    if (btTimer) {
+      clearInterval(btTimer);
+      btTimer = setInterval(stepBar, btSpeedMs);
+    }
+  }
+
+  function stepBar() {
+    if (!isPro) { go('sub'); return; }
+    var sym = document.getElementById('btSym') ? document.getElementById('btSym').value : 'XAUUSD';
+    var cfg = symConfigs[sym] || symConfigs.XAUUSD;
+    var tfMult = tfMultipliers[btActiveTf] || 1.0;
+
+    var last = btBars[btBars.length - 1];
+    var next = makeNextCandle(last.c, cfg, tfMult);
+    btBars.push(next);
+    if (btBars.length > 52) {
+      btBars.shift();
+      for (var d = 0; d < btDrawings.length; d++) {
+        if (btDrawings[d].i1 !== undefined) btDrawings[d].i1 = Math.max(0, btDrawings[d].i1 - 1);
+        if (btDrawings[d].i2 !== undefined) btDrawings[d].i2 = Math.max(0, btDrawings[d].i2 - 1);
+      }
+    }
+
+    // Check Stop-Loss or Take-Profit Hit on New Candle
+    if (btPos) {
+      if (btPos.dir === 'BUY') {
+        if (next.l <= btPos.sl) closeBtPos('Stop Loss Hit', btPos.sl);
+        else if (next.h >= btPos.tp) closeBtPos('Take Profit Hit', btPos.tp);
+      } else {
+        if (next.h >= btPos.sl) closeBtPos('Stop Loss Hit', btPos.sl);
+        else if (next.l <= btPos.tp) closeBtPos('Take Profit Hit', btPos.tp);
+      }
+    }
+
+    updateBtUi();
+    drawBt();
+  }
+
+  function resetBt() {
+    btNet = 0;
+    btClosedList = new Array();
+    initBtSymbol();
+  }
+
+  function btOrder(dir) {
+    if (!isPro) { go('sub'); return; }
+    if (btPos) {
+      alert('Close your current open position first before opening a new trade.');
+      return;
+    }
+    var sym = document.getElementById('btSym').value;
+    var cfg = symConfigs[sym] || symConfigs.XAUUSD;
+    var lastBar = btBars[btBars.length - 1];
+    var entry = lastBar.c;
+    var lots = Math.max(0.01, parseFloat(document.getElementById('btLots').value) || 0.10);
+    var slPts = Math.abs(parseFloat(document.getElementById('btSlPts').value) || 5);
+    var tpPts = Math.abs(parseFloat(document.getElementById('btTpPts').value) || 12);
+
+    var sl = dir === 'BUY' ? +(entry - slPts).toFixed(cfg.dec) : +(entry + slPts).toFixed(cfg.dec);
+    var tp = dir === 'BUY' ? +(entry + tpPts).toFixed(cfg.dec) : +(entry - tpPts).toFixed(cfg.dec);
+
+    btPos = { sym: sym, tf: btActiveTf, dir: dir, lots: lots, entry: entry, sl: sl, tp: tp };
+    updateBtUi();
+    drawBt();
+  }
+
+  function closeBtPos(reason, forcedExit) {
+    if (!btPos) return;
+    var cfg = symConfigs[btPos.sym] || symConfigs.XAUUSD;
+    var exitPrice = forcedExit !== undefined ? forcedExit : btBars[btBars.length - 1].c;
+    var diffPts = btPos.dir === 'BUY' ? (exitPrice - btPos.entry) : (btPos.entry - exitPrice);
+    var pnl = +(diffPts * btPos.lots * cfg.mult).toFixed(2);
+
+    btNet = +(btNet + pnl).toFixed(2);
+    btClosedList.unshift({
+      num: btClosedList.length + 1,
+      sym: btPos.sym,
+      tf: btPos.tf,
+      dir: btPos.dir,
+      lots: btPos.lots,
+      entry: btPos.entry.toFixed(cfg.dec),
+      exit: exitPrice.toFixed(cfg.dec),
+      sltp: btPos.sl.toFixed(cfg.dec) + ' / ' + btPos.tp.toFixed(cfg.dec),
+      pts: (diffPts >= 0 ? '+' : '') + diffPts.toFixed(cfg.dec),
+      reason: reason,
+      pnl: pnl
+    });
+
+    btPos = null;
+    updateBtUi();
+    drawBt();
+  }
+
+  function updateBtUi() {
+    if (!btBars.length) return;
+    var sym = document.getElementById('btSym') ? document.getElementById('btSym').value : 'XAUUSD';
+    var cfg = symConfigs[sym] || symConfigs.XAUUSD;
+    var lastBar = btBars[btBars.length - 1];
+
+    if (document.getElementById('btLivePrice')) {
+      document.getElementById('btLivePrice').textContent = lastBar.c.toFixed(cfg.dec);
+      document.getElementById('btLivePrice').className = lastBar.c >= lastBar.o ? 'tag-g' : 'tag-r';
+    }
+
+    var floatPnl = 0;
+    var openBox = document.getElementById('btOpenBox');
+    if (btPos) {
+      var diff = btPos.dir === 'BUY' ? (lastBar.c - btPos.entry) : (btPos.entry - lastBar.c);
+      floatPnl = +(diff * btPos.lots * cfg.mult).toFixed(2);
+      if (openBox) {
+        openBox.style.display = 'flex';
+        document.getElementById('btOpenInfo').innerHTML =
+          '<strong>OPEN ' + btPos.dir + ' ' + btPos.sym + ' (' + btPos.lots + ' Lots)</strong> • ' +
+          'Entry: <strong>' + btPos.entry.toFixed(cfg.dec) + '</strong> • ' +
+          'SL: <span class="loss">' + btPos.sl.toFixed(cfg.dec) + '</span> • ' +
+          'TP: <span class="win">' + btPos.tp.toFixed(cfg.dec) + '</span> • ' +
+          'Floating P&L: <strong class="' + (floatPnl >= 0 ? 'win' : 'loss') + '">' + (floatPnl >= 0 ? '+$' : '-$') + Math.abs(floatPnl).toFixed(2) + '</strong>';
+      }
+    } else if (openBox) {
+      openBox.style.display = 'none';
+    }
+
+    var equity = 10000 + btNet + floatPnl;
+    var wins = btClosedList.filter(function(x) { return x.pnl > 0; }).length;
+    var wr = btClosedList.length ? ((wins / btClosedList.length) * 100).toFixed(1) : '0';
+
+    if (document.getElementById('btBal')) document.getElementById('btBal').textContent = '$' + equity.toFixed(2);
+    if (document.getElementById('btFloat')) {
+      document.getElementById('btFloat').textContent = (floatPnl >= 0 ? '+$' : '-$') + Math.abs(floatPnl).toFixed(2);
+      document.getElementById('btFloat').className = floatPnl >= 0 ? 'win' : 'loss';
+    }
+    if (document.getElementById('btPnl')) {
+      document.getElementById('btPnl').textContent = (btNet >= 0 ? '+$' : '-$') + Math.abs(btNet).toFixed(2);
+      document.getElementById('btPnl').className = btNet >= 0 ? 'win' : 'loss';
+    }
+    if (document.getElementById('btStats')) document.getElementById('btStats').textContent = wr + '% (' + btClosedList.length + ' trades)';
+
+    var hBody = document.getElementById('btHistoryBody');
+    if (hBody) {
+      hBody.innerHTML = btClosedList.map(function(t) {
+        return '<tr>' +
+          '<td>' + t.num + '</td>' +
+          '<td><strong>' + t.sym + '</strong> <small>(' + t.tf + ')</small></td>' +
+          '<td><span class="' + (t.dir === 'BUY' ? 'tag-g' : 'tag-r') + '">' + t.dir + '</span></td>' +
+          '<td>' + t.lots + '</td>' +
+          '<td>' + t.entry + '</td>' +
+          '<td>' + t.exit + '</td>' +
+          '<td>' + t.sltp + '</td>' +
+          '<td class="' + (t.pnl >= 0 ? 'win' : 'loss') + '">' + t.pts + '</td>' +
+          '<td>' + t.reason + '</td>' +
+          '<td class="' + (t.pnl >= 0 ? 'win' : 'loss') + '">' + (t.pnl >= 0 ? '+$' : '-$') + Math.abs(t.pnl).toFixed(2) + '</td>' +
+        '</tr>';
+      }).join('') || '<tr><td colspan="10" style="text-align:center; color:var(--muted); padding:14px;">No backtest trades yet. Use Play or +1 Bar and click BUY or SELL.</td></tr>';
+    }
+  }
+
+  initBtSymbol();
     <!-- 8. TRADERS LOUNGE -->
     <section id="v-lounge" class="view">
       <div class="card">
