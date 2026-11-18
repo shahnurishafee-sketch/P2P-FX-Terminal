@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>P2P FX Terminal — Trading Dashboard</title>
+  <script src="https://jsdelivr.net"></script>
+  <style>
+    :root {
+      --bg: #050908;
+      --sidebar: #080f0d;
+      --card: #0c1613;
+      --card-2: #111f1b;
+      --border: #1a2f28;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --green: #00ff88;
+      --green-soft: rgba(0, 255, 136, 0.14);
+      --red: #ff2a5f;
+      --red-soft: rgba(255, 42, 95, 0.14);
+      --shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    }
+    body.light-mode {
+      --bg: #f4f7fb;
+      --sidebar: #ffffff;
+      --card: #ffffff;
+      --card-2: #f8fafc;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --green: #059669;
+      --green-soft: rgba(16, 185, 129, 0.12);
+      --red: #e11d48;
+      --red-soft: rgba(225, 29, 72, 0.12);
+      --shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden;
+    }
+    button, input, select, textarea { font-family: inherit; }
+    .win { color: var(--green) !important; font-weight: 700; }
+    .loss { color: var(--red) !important; font-weight: 700; }
+
+    /* Scrollable Left Sidebar */
+    aside.sidebar {
+      width: 255px; background: var(--sidebar); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; height: 100vh; flex-shrink: 0;
+    }
+    .sb-brand { padding: 18px 18px 12px; display: flex; align-items: center; justify-content: space-between; }
+    .logo { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 1.05rem; }
+    .logo-icon {
+      background: linear-gradient(135deg, #00ff88 0%, #ff2a5f 100%);
+      color: #040706; padding: 4px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 900;
+    }
+    .beta-pill { background: #f97316; color: #fff; font-size: 0.62rem; font-weight: 800; padding: 2px 7px; border-radius: 5px; }
+    .sb-profile {
+      margin: 0 14px 12px; padding: 10px 12px; background: var(--card-2); border: 1px solid var(--border);
+      border-radius: 12px; display: flex; align-items: center; gap: 10px; cursor: pointer;
+    }
+    .sb-avatar {
+      width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, #00ff88, #ff2a5f);
+      color: #040706; font-weight: 900; display: grid; place-items: center; flex-shrink: 0;
+    }
+    .sb-scroll { flex: 1; overflow-y: auto; padding: 4px 12px 16px; display: flex; flex-direction: column; gap: 3px; }
+    .sb-scroll::-webkit-scrollbar { width: 5px; }
+    .sb-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+    .nav-item {
+      display: flex; align-items: center; justify-content: space-between; width: 100%;
+      padding: 9px 12px; border-radius: 9px; border: none; background: transparent;
+      color: var(--muted); font-size: 0.88rem; font-weight: 600; cursor: pointer; text-align: left;
+    }
+    .nav-item:hover, .nav-item.active { background: var(--green-soft); color: var(--green); }
+    .nav-sub { padding-left: 26px; display: flex; flex-direction: column; gap: 2px; margin-bottom: 4px; }
+    .nav-sub .nav-item { font-size: 0.83rem; padding: 7px 12px; }
+    .tag-pro { background: rgba(0, 255, 136, 0.16); color: var(--green); font-size: 0.62rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; }
+    .tag-elite { background: rgba(255, 42, 95, 0.18); color: var(--red); font-size: 0.62rem; font-weight: 800; padding: 2px 6px; border-radius: 4px; }
+    .bug-box { margin: 12px 0; padding: 12px; background: var(--card-2); border: 1px solid var(--border); border-radius: 10px; font-size: 0.78rem; color: var(--muted); }
+    /* Main Shell & Topbar */
+    .main-wrap { flex: 1; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+    header.topbar {
+      height: 66px; background: var(--sidebar); border-bottom: 1px solid var(--border);
+      padding: 0 24px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-shrink: 0;
+    }
+    .search-box {
+      display: flex; align-items: center; justify-content: space-between; width: 320px; max-width: 40vw;
+      background: var(--card-2); border: 1px solid var(--border); border-radius: 10px; padding: 7px 12px; color: var(--muted); font-size: 0.85rem;
+    }
+    .search-box input { background: transparent; border: none; color: var(--text); width: 100%; outline: none; font-size: 0.85rem; }
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+    .icon-btn {
+      height: 36px; min-width: 36px; padding: 0 10px; border-radius: 9px; background: var(--card-2);
+      border: 1px solid var(--border); color: var(--text); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.84rem; font-weight: 600;
+    }
+    .icon-btn:hover { border-color: var(--green); color: var(--green); }
+    .btn-neon {
+      background: linear-gradient(135deg, #00ff88 0%, #00c46a 100%); color: #03150c;
+      border: none; padding: 9px 16px; border-radius: 9px; font-weight: 800; font-size: 0.85rem; cursor: pointer;
+    }
+    .btn-red {
+      background: linear-gradient(135deg, #ff2a5f 0%, #cc1442 100%); color: #fff;
+      border: none; padding: 9px 16px; border-radius: 9px; font-weight: 700; font-size: 0.85rem; cursor: pointer;
+    }
+    .content-scroll { flex: 1; overflow-y: auto; padding: 22px 26px 52px; }
+    .page-view { display: none; }
+    .page-view.active { display: block; }
+
+    /* Cards & Grids */
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; box-shadow: var(--shadow); margin-bottom: 18px; }
+    .kpi-grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-bottom: 18px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 18px; }
+    .split-2 { display: grid; grid-template-columns: 340px 1fr; gap: 18px; }
+    @media (max-width: 960px) { .grid-2, .split-2 { grid-template-columns: 1fr; } aside.sidebar { width: 210px; } }
+    .pill-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .pill {
+      padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--card-2);
+      color: var(--muted); font-size: 0.8rem; font-weight: 600; cursor: pointer;
+    }
+    .pill.active { background: var(--green); color: #03150c; border-color: var(--green); font-weight: 800; }
+
+    /* Calendar With Weekly Column */
+    .cal-8 { display: grid; grid-template-columns: repeat(7, 1fr) 1.15fr; gap: 6px; text-align: center; }
+    .cal-hdr { font-size: 0.72rem; color: var(--muted); font-weight: 700; padding-bottom: 4px; }
+    .cal-day {
+      background: var(--card-2); border: 1px solid var(--border); border-radius: 8px; min-height: 56px;
+      padding: 6px; display: flex; flex-direction: column; justify-content: space-between; font-size: 0.76rem; cursor: pointer;
+    }
+    .cal-day.win-day { background: var(--green-soft); border-color: var(--green); }
+    .cal-day.loss-day { background: var(--red-soft); border-color: var(--red); }
+    .cal-week {
+      background: var(--card-2); border: 1px dashed var(--border); border-radius: 8px; min-height: 56px;
+      padding: 6px; display: flex; flex-direction: column; justify-content: center; font-size: 0.72rem;
+    }
+
+    /* Tables, Toggles & Bottom News Ticker */
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th, td { padding: 11px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-size: 0.76rem; text-transform: uppercase; }
+    .switch { position: relative; display: inline-block; width: 42px; height: 22px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; inset: 0; background: #334155; border-radius: 99px; transition: .2s; }
+    .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: .2s; }
+    input:checked + .slider { background: var(--green); }
+    input:checked + .slider:before { transform: translateX(20px); background: #03150c; }
+    .news-ticker {
+      height: 34px; background: var(--sidebar); border-top: 1px solid var(--border);
+      display: flex; align-items: center; padding: 0 16px; gap: 12px; font-size: 0.78rem; flex-shrink: 0;
+    }
+    .news-badge { background: rgba(255, 42, 95, 0.18); color: var(--red); font-weight: 800; padding: 2px 8px; border-radius: 5px; }
+    dialog { background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 16px; padding: 24px; max-width: 540px; width: 92%; }
+    dialog::backdrop { background: rgba(0, 0, 0, 0.75); }
+    .form-input { width: 100%; background: var(--card-2); border: 1px solid var(--border); color: var(--text); padding: 10px 12px; border-radius: 9px; font-size: 0.88rem; margin-top: 5px; }
+  </style>
+</head>
+<body>
+<!-- SCROLLABLE LEFT SIDEBAR -->
+<aside class="sidebar">
+  <div class="sb-brand">
+    <div class="logo"><span class="logo-icon">P2PFB</span> P2P <span style="color:var(--green);">FX</span> <span style="color:var(--red);">Terminal</span></div>
+    <span class="beta-pill">BETA</span>
+  </div>
+
+  <div class="sb-profile" onclick="showPage('settings', 'Settings')">
+    <div class="sb-avatar" id="sbAvatar">M</div>
+    <div style="overflow:hidden;">
+      <div style="display:flex; align-items:center; gap:6px;">
+        <strong id="sbName" style="font-size:0.86rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Trader</strong>
+        <span class="tag-pro" id="sbPlanBadge">7D TRIAL</span>
+      </div>
+      <small style="color:var(--muted); font-size:0.74rem;">Profile & Rules</small>
+    </div>
+  </div>
+
+  <div class="sb-scroll">
+    <button class="nav-item active" onclick="showPage('dashboard', 'Dashboard', this)"><span>📊 Dashboard</span></button>
+    <button class="nav-item" onclick="showPage('trades', 'Trades', this)"><span>⇄ Trades</span></button>
+    <button class="nav-item" onclick="showPage('journal', 'Journal', this)"><span>📖 Journal</span></button>
+
+    <button class="nav-item" onclick="showPage('perfAnalysis', 'Performance Analysis', this)"><span>📈 Analysis</span><span>▾</span></button>
+    <div class="nav-sub">
+      <button class="nav-item" onclick="showPage('perfAnalysis', 'Performance Analysis', this)"><span>Performance</span></button>
+      <button class="nav-item" onclick="showPage('tradeAnalysis', 'Trade Analysis', this)"><span>Trade Analysis</span></button>
+    </div>
+
+    <button class="nav-item" onclick="showPage('market', 'Economic Calendar', this)"><span>🌐 Market</span></button>
+    <button class="nav-item" onclick="showPage('aiReport', 'AI Report', this)"><span>🤖 AI Report</span><span class="tag-pro">PRO</span></button>
+    <button class="nav-item" onclick="showPage('backtesting', 'Backtesting', this)"><span>↺ Backtesting</span><span class="tag-elite">ELITE</span></button>
+
+    <button class="nav-item" onclick="showPage('lounge', 'Traders Lounge', this)"><span>👥 Traders Lounge</span><span>▾</span></button>
+    <div class="nav-sub">
+      <button class="nav-item" onclick="showPage('lounge', 'Traders Lounge', this)"><span>Lounges</span><span class="tag-pro">PRO</span></button>
+      <button class="nav-item" onclick="showPage('leaderboard', 'Leaderboard', this)"><span>🏆 Leaderboard</span></button>
+    </div>
+
+    <button class="nav-item" onclick="showPage('tools', 'Trading Tools', this)"><span>🔧 Tools</span></button>
+
+    <div class="bug-box">
+      <strong style="color:var(--text);">Found a bug?</strong><br>Report an issue or share feedback<br>
+      <button class="icon-btn" style="width:100%; margin-top:8px;" onclick="showPage('support', 'Help & Support')">Report Issue</button>
+    </div>
+
+    <button class="nav-item" onclick="showPage('settings', 'Settings', this)"><span>⚙ Settings</span></button>
+    <button class="nav-item" onclick="showPage('support', 'Help & Support', this)"><span>❓ Help & Support</span></button>
+    <button class="nav-item" onclick="showPage('subscription', 'Subscription', this)"><span>💳 Subscription</span></button>
+  </div>
+</aside>
+
+<!-- MAIN WORKSPACE -->
+<div class="main-wrap">
+  <header class="topbar">
+    <div>
+      <strong id="pageTitle" style="font-size:1.15rem;">Dashboard</strong>
+      <div id="liveDate" style="font-size:0.75rem; color:var(--muted);">Wed, Nov 18</div>
+    </div>
+
+    <div class="search-box">
+      <input type="text" id="globalSearch" placeholder="Search symbols, pages, tools..." onkeyup="handleGlobalSearch(this.value)">
+      <span style="font-size:0.72rem; border:1px solid var(--border); padding:2px 6px; border-radius:5px;">Ctrl+K</span>
+    </div>
+
+    <div class="top-actions">
+      <button class="icon-btn" onclick="toggleTheme()" title="Switch Light / Neon Dark Mode">☀ / ☾</button>
+      <button class="icon-btn" onclick="openAddTradeModal()" title="Quick Add Trade">+</button>
+      <div class="icon-btn" id="liveClock">11:57:00 AM</div>
+      <button class="icon-btn" onclick="showPage('market', 'Economic Calendar')">🔔</button>
+      <button class="btn-red" style="padding:7px 12px; font-size:0.78rem;" onclick="logoutUser()">Logout</button>
+    </div>
+  </header>
+
+  <div class="content-scroll">
+    <!-- ==================== 1. DASHBOARD VIEW ==================== -->
+    <div id="view-dashboard" class="page-view active">
+      <div class="kpi-grid-4">
+        <div class="card" style="margin:0;"><small style="color:var(--muted);">Total P&L</small><h2 id="dTotalPnl" style="margin:8px 0 4px;">+$0.00</h2><small id="dTotalCount" style="color:var(--muted);">→ 0 trades</small></div>
+        <div class="card" style="margin:0;"><small style="color:var(--muted);">Unrealized</small><h2 id="dUnrealized" style="margin:8px 0 4px;">+$0.00</h2><small id="dOpenCount" style="color:var(--muted);">0 open positions</small></div>
+        <div class="card" style="margin:0;"><small style="color:var(--muted);">Realized</small><h2 id="dRealized" style="margin:8px 0 4px;">+$0.00</h2><small id="dClosedCount" style="color:var(--muted);">0 closed trades</small></div>
+        <div class="card" style="margin:0;"><small style="color:var(--muted);">Win Rate</small><h2 id="dWinRate" style="margin:8px 0 6px;">0%</h2><div style="height:6px;background:var(--card-2);border-radius:99px;"><div id="dWinBar" style="height:100%;width:0%;background:var(--green);border-radius:99px;"></div></div></div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+          <div><small style="color:var(--muted);">Performance</small><h3 id="dPerfHeader" style="margin:2px 0 0;">+$0.00</h3></div>
+          <div class="pill-row">
+            <button class="pill" onclick="setDashRange('1D', this)">1D</button>
+            <button class="pill" onclick="setDashRange('1W', this)">1W</button>
+            <button class="pill" onclick="setDashRange('1M', this)">1M</button>
+            <button class="pill" onclick="setDashRange('3M', this)">3M</button>
+            <button class="pill active" onclick="setDashRange('ALL', this)">ALL</button>
+          </div>
+        </div>
+        <canvas id="dashChart" height="90"></canvas>
+      </div>
+
+      <!-- Monthly P&L Calendar With Weekly Column -->
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <strong>Monthly P&L</strong>
+            <input type="month" id="dashCalMonth" onchange="renderDashCalendar()" class="form-input" style="width:auto; margin:0; padding:5px 10px;">
+          </div>
+          <div style="display:flex; align-items:center; gap:14px; font-size:0.84rem;">
+            <span>Monthly: <strong id="dashMonthSum" class="win">+$0.00</strong></span>
+            <span><span style="color:var(--green);">●</span> Profit</span>
+            <span><span style="color:var(--red);">●</span> Loss</span>
+          </div>
+        </div>
+        <div class="cal-8" id="dashCalGrid"></div>
+      </div>
+
+      <!-- Open Positions & Recent Activity -->
+      <div class="grid-2">
+        <div class="card" style="margin:0;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <strong>Open Positions</strong>
+            <button class="pill" onclick="showPage('trades', 'Trades')">View All Positions →</button>
+          </div>
+          <div id="dOpenList" style="color:var(--muted); font-size:0.86rem;">No open positions</div>
+        </div>
+        <div class="card" style="margin:0;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <strong>Recent Activity</strong>
+            <button class="pill" onclick="showPage('trades', 'Trades')">View All Activity →</button>
+          </div>
+          <div id="dRecentList" style="color:var(--muted); font-size:0.86rem;">No recent activity</div>
+        </div>
+      </div>
+
+      <!-- Top Performers & Quick Stats -->
+      <div class="grid-2" style="margin-top:18px;">
+        <div class="card" style="margin:0;">
+          <strong>Top Performers</strong>
+          <div id="dTopSymbols" style="margin-top:14px; color:var(--muted); font-size:0.86rem;">No trading data yet</div>
+        </div>
+        <div class="card" style="margin:0;">
+          <strong>Quick Stats</strong>
+          <div class="grid-2" style="margin-top:14px; margin-bottom:0; gap:10px;">
+            <div style="background:var(--card-2); padding:12px; border-radius:10px;"><small style="color:var(--muted);">AVG WIN</small><div id="qsAvgWin" class="win" style="font-size:1.1rem; margin-top:4px;">+$0.00</div></div>
+            <div style="background:var(--card-2); padding:12px; border-radius:10px;"><small style="color:var(--muted);">AVG LOSS</small><div id="qsAvgLoss" class="loss" style="font-size:1.1rem; margin-top:4px;">-$0.00</div></div>
+            <div style="background:var(--card-2); padding:12px; border-radius:10px;"><small style="color:var(--muted);">BEST TRADE</small><div id="qsBest" class="win" style="font-size:1.1rem; margin-top:4px;">+$0.00</div></div>
+            <div style="background:var(--card-2); padding:12px; border-radius:10px;"><small style="color:var(--muted);">WORST TRADE</small><div id="qsWorst" class="loss" style="font-size:1.1rem; margin-top:4px;">-$0.00</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- ==================== 2. TRADES VIEW ==================== -->
+    <div id="view-trades" class="page-view">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+        <div>
+          <h2 style="margin:0;">Trades</h2>
+          <small style="color:var(--muted);"><span style="color:var(--red);">●</span> Manual & CSV Mode • Syncs locally in browser</small>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <button class="icon-btn" onclick="showPage('settings', 'Settings')">🔗 Connect MT4/MT5</button>
+          <button class="btn-neon" onclick="openAddTradeModal()">+ Add Trade</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+          <strong>Trade History</strong>
+          <div style="display:flex; gap:8px;">
+            <select id="tradeTypeFilter" onchange="renderTradesTable()" class="form-input" style="margin:0; padding:6px 10px; width:auto;">
+              <option value="ALL">All Types</option>
+              <option value="Long">Long Only</option>
+              <option value="Short">Short Only</option>
+              <option value="OPEN">Open Positions</option>
+            </select>
+            <button class="icon-btn" onclick="exportCSV()">⬇ Export CSV</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr><th>OPEN / CLOSE</th><th>SYMBOL</th><th>TYPE</th><th>ENTRY</th><th>EXIT</th><th>SIZE</th><th>P&L</th><th>SOURCE</th><th>ACTION</th></tr>
+            </thead>
+            <tbody id="tradesTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 3. JOURNAL VIEW ==================== -->
+    <div id="view-journal" class="page-view">
+      <div class="split-2">
+        <div class="card" style="margin:0;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <strong>Trade Journal</strong>
+            <span id="jCountBadge" class="tag-pro">0 journaled</span>
+          </div>
+          <div class="pill-row" style="margin-bottom:10px;">
+            <button class="pill active" onclick="filterJournalList('ALL', this)">All</button>
+            <button class="pill" onclick="filterJournalList('JOURNALED', this)">Journaled</button>
+            <button class="pill" onclick="filterJournalList('PENDING', this)">Pending</button>
+          </div>
+          <input type="text" id="jSearch" placeholder="Search symbol..." onkeyup="renderJournalList()" class="form-input" style="margin-bottom:12px;">
+          <div id="journalTradeList" style="display:flex; flex-direction:column; gap:8px; max-height:460px; overflow-y:auto;"></div>
+        </div>
+
+        <div class="card" style="margin:0;" id="journalEditorBox">
+          <div style="text-align:center; padding:60px 20px; color:var(--muted);">
+            <div style="font-size:2.4rem; margin-bottom:10px;">📖</div>
+            <h3 style="margin:0 0 6px; color:var(--text);">Select a trade to journal</h3>
+            <p style="margin:0;">Click any trade on the left (or log a new trade) to write your pre/post-trade notes, setup tags, and emotional rating.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- ==================== 4. PERFORMANCE ANALYSIS VIEW ==================== -->
+    <div id="view-perfAnalysis" class="page-view">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
+        <div><h2 style="margin:0;">Performance Analytics</h2><small style="color:var(--muted);">Deep-dive metrics & drawdown breakdown</small></div>
+        <div class="pill-row">
+          <button class="pill active" onclick="setPerfFilter('ALL', this)">All Trades</button>
+          <button class="pill" onclick="setPerfFilter('WIN', this)">Winners</button>
+          <button class="pill" onclick="setPerfFilter('LOSS', this)">Losers</button>
+        </div>
+      </div>
+
+      <div class="kpi-grid-4">
+        <div class="card" style="margin:0;"><small style="color:var(--muted);">Total P&L</small><h2 id="paTotal" style="margin:6px 0 0;">$0.00</h2></div>
+        <div class="card" style="margin:0;"><small style="color:var(--muted);">Win Rate</small><h2 id="paWin" style="margin:6px 0 0;">0.0%</h2></div>
+        <div class="card" style="margin:0;"><small style="color:var(--muted);">Profit Factor</small><h2 id="paPF" style="margin:6px 0 0;">0.00</h2></div>
+        <div class="card" style="margin:0;"><small style="color:var(--muted);">Expectancy</small><h2 id="paExp" style="margin:6px 0 0;">$0.00</h2></div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <strong>Equity Curve & Drawdown</strong>
+          <div class="pill-row">
+            <button class="pill active" id="btnEqMode" onclick="toggleChartMode('EQUITY')">Equity Curve</button>
+            <button class="pill" id="btnDdMode" onclick="toggleChartMode('DD')">Drawdown</button>
+          </div>
+        </div>
+        <canvas id="perfChart" height="85"></canvas>
+      </div>
+
+      <!-- 26-Metric Your Stats Table -->
+      <div class="card">
+        <h3 style="margin:0 0 14px;">Your Stats</h3>
+        <div id="yourStatsGrid" class="grid-2" style="margin:0;"></div>
+      </div>
+    </div>
+
+    <!-- ==================== 5. TRADE ANALYSIS VIEW ==================== -->
+    <div id="view-tradeAnalysis" class="page-view">
+      <div class="split-2">
+        <div class="card" style="margin:0;">
+          <strong>Trade Analysis</strong>
+          <div id="taTradeList" style="display:flex; flex-direction:column; gap:8px; margin-top:12px;"></div>
+        </div>
+        <div class="card" style="margin:0;" id="taDetailBox">
+          <div style="text-align:center; padding:60px 20px; color:var(--muted);">
+            <div style="font-size:2.4rem; margin-bottom:10px;">📊</div>
+            <h3 style="margin:0 0 6px; color:var(--text);">Select a trade to analyze</h3>
+            <p style="margin:0;">Choose a trade from the left list to inspect execution price, R-multiple, and checklist compliance.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- ==================== 6. MARKET: FREE ECONOMIC CALENDAR ==================== -->
+    <div id="view-market" class="page-view">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+        <div>
+          <h2 style="margin:0;">Economic Calendar <span class="tag-pro">100% FREE FOR COMMUNITY</span></h2>
+          <small style="color:var(--muted);">All high, medium & low impact events unlocked across all currencies</small>
+        </div>
+        <div class="pill-row">
+          <button class="pill active" onclick="filterNews('ALL', this)">All Impact</button>
+          <button class="pill" onclick="filterNews('High', this)">High Impact</button>
+          <button class="pill" onclick="filterNews('Med', this)">Medium</button>
+          <button class="pill" onclick="filterNews('Low', this)">Low</button>
+        </div>
+      </div>
+
+      <div class="card" style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>TIME (IST)</th><th>CURRENCY</th><th>IMPACT</th><th>EVENT</th><th>ACTUAL</th><th>FORECAST</th><th>PREVIOUS</th></tr></thead>
+          <tbody id="econTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ==================== 7. AI REPORT (7-DAY FREE TRIAL) ==================== -->
+    <div id="view-aiReport" class="page-view">
+      <div id="aiTrialBanner" class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div>
+          <h2 style="margin:0;">AI-Powered Trade Report</h2>
+          <small id="aiTrialStatus" style="color:var(--green);">7-Day Free Trial Active</small>
+        </div>
+        <button class="btn-neon" id="btnRunAi" onclick="generateAiReport()">⚡ Generate AI Report From My Trades</button>
+      </div>
+      <div id="aiReportContent"></div>
+    </div>
+    <!-- ==================== 8. BACKTESTING (BAR REPLAY + 7-DAY FREE TRIAL) ==================== -->
+    <div id="view-backtesting" class="page-view">
+      <div id="btTrialBanner" class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div>
+          <h2 style="margin:0;">Strategy Backtesting — Bar Replay Engine</h2>
+          <small id="btTrialStatus" style="color:var(--green);">7-Day Free Trial Active • All TradingView Replay Tools Unlocked</small>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <select id="btSymbol" onchange="resetBacktest()" class="form-input" style="margin:0; width:auto;">
+            <option value="XAUUSD">XAUUSD (Gold)</option>
+            <option value="EURUSD">EURUSD</option>
+            <option value="BTCUSD">BTCUSD</option>
+            <option value="NIFTY">NIFTY 50</option>
+          </select>
+          <select id="btTf" onchange="resetBacktest()" class="form-input" style="margin:0; width:auto;">
+            <option value="5m">5m</option>
+            <option value="15m" selected>15m</option>
+            <option value="1H">1H</option>
+            <option value="4H">4H</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="btWorkspace">
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:12px;">
+            <div class="pill-row">
+              <button class="btn-neon" id="btPlayBtn" onclick="toggleReplay()">▶ Play Replay</button>
+              <button class="icon-btn" onclick="stepReplay()">⏭ Step +1 Bar</button>
+              <select id="btSpeed" class="form-input" style="margin:0; width:auto; padding:6px 10px;">
+                <option value="900">1x Speed</option>
+                <option value="450">2x Speed</option>
+                <option value="180">5x Speed</option>
+              </select>
+              <button class="icon-btn" onclick="resetBacktest()">↺ Reset</button>
+            </div>
+            <div style="font-size:0.88rem;">
+              Price: <strong id="btLivePrice" class="win">2650.00</strong> • Replay P&L: <strong id="btPnl" class="win">$0.00</strong>
+            </div>
+          </div>
+
+          <canvas id="btCanvas" width="900" height="310" style="width:100%; height:310px; background:var(--card-2); border-radius:10px; border:1px solid var(--border);"></canvas>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:14px;">
+            <div style="display:flex; gap:8px; align-items:center;">
+              <input type="number" id="btLots" value="0.10" step="0.01" class="form-input" style="width:95px; margin:0;" placeholder="Lots">
+              <button class="btn-neon" onclick="btOrder('Buy')">Buy Market</button>
+              <button class="btn-red" onclick="btOrder('Sell')">Sell Market</button>
+              <button class="icon-btn" onclick="btClosePosition()">Close Open Pos</button>
+            </div>
+            <div id="btPosStatus" style="font-size:0.84rem; color:var(--muted);">No active replay position</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- ==================== 9. TRADERS LOUNGE ==================== -->
+    <div id="view-lounge" class="page-view">
+      <div class="split-2">
+        <div class="card" style="margin:0;">
+          <strong>LOUNGES</strong>
+          <div style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
+            <div style="padding:12px; border-radius:10px; background:var(--green-soft); border:1px solid var(--green);">
+              <strong>P2P FX Terminal Official</strong><br><small style="color:var(--muted);">Subscriber Ideas & Live Setups</small>
+            </div>
+            <div style="padding:12px; border-radius:10px; background:var(--card-2); border:1px solid var(--border);">
+              <strong>Gold & Indices Room</strong><br><small style="color:var(--muted);">XAUUSD & NIFTY Breakdowns</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin:0;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <div><h3 style="margin:0;">P2P FX Terminal Lounge</h3><small style="color:var(--muted);">Share trade setups & market bias with fellow subscribers</small></div>
+            <span class="tag-pro" id="loungeAccessTag">SUBSCRIBER ACCESS</span>
+          </div>
+
+          <div id="loungeComposer" style="margin-bottom:16px;">
+            <div style="display:flex; gap:8px; margin-bottom:8px;">
+              <input type="text" id="ideaSymbol" placeholder="Pair (e.g. XAUUSD)" class="form-input" style="margin:0; width:150px;">
+              <select id="ideaBias" class="form-input" style="margin:0; width:120px;"><option value="LONG">LONG</option><option value="SHORT">SHORT</option></select>
+              <input type="text" id="ideaText" placeholder="Share your setup rationale, entry, SL & TP..." class="form-input" style="margin:0; flex:1;">
+              <button class="btn-neon" onclick="postTradeIdea()">Post Idea</button>
+            </div>
+          </div>
+
+          <div id="loungeFeed" style="display:flex; flex-direction:column; gap:12px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 10. LEADERBOARD (TODAY / WEEK / MONTH / YEAR) ==================== -->
+    <div id="view-leaderboard" class="page-view">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:16px;">
+        <div>
+          <h2 style="margin:0;">Leaderboard</h2>
+          <small id="lbSubtitle" style="color:var(--muted);">Top performing traders this week</small>
+        </div>
+        <div class="pill-row">
+          <button class="pill" onclick="renderLeaderboard('day', this)">Today</button>
+          <button class="pill active" onclick="renderLeaderboard('week', this)">This Week</button>
+          <button class="pill" onclick="renderLeaderboard('month', this)">This Month</button>
+          <button class="pill" onclick="renderLeaderboard('year', this)">This Year</button>
+        </div>
+      </div>
+
+      <div id="lbPodium" class="grid-3"></div>
+      <div class="card" style="overflow-x:auto;">
+        <table>
+          <thead><tr><th>RANK</th><th>TRADER</th><th>TRADES</th><th>WIN RATE</th><th>NET P&L</th></tr></thead>
+          <tbody id="lbTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <!-- ==================== 11. TOOLS HUB & SUB-TOOLS ==================== -->
+    <div id="view-tools" class="page-view">
+      <div id="toolsHub">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <div><h2 style="margin:0;">Trading Tools</h2><small style="color:var(--muted);">Professional calculators & real-time market utilities</small></div>
+          <div><span class="tag-pro">3 AVAILABLE</span> <span class="tag-elite">4 COMING SOON</span></div>
+        </div>
+
+        <div class="grid-3">
+          <div class="card" style="margin:0;">
+            <span class="tag-pro">POPULAR</span>
+            <h3 style="margin:12px 0 6px;">Position Size Calculator</h3>
+            <p style="color:var(--muted); font-size:0.86rem;">Calculate optimal lot size based on account balance, risk % and stop loss distance.</p>
+            <button class="btn-neon" style="width:100%;" onclick="openSubTool('toolCalc')">Open Tool →</button>
+          </div>
+          <div class="card" style="margin:0;">
+            <span class="tag-pro">LIVE</span>
+            <h3 style="margin:12px 0 6px;">Forex Market Hours</h3>
+            <p style="color:var(--muted); font-size:0.86rem;">Track Sydney, Tokyo, London & New York trading sessions across the globe in real time.</p>
+            <button class="btn-neon" style="width:100%;" onclick="openSubTool('toolHours')">Open Tool →</button>
+          </div>
+          <div class="card" style="margin:0;">
+            <span class="tag-elite">NEW</span>
+            <h3 style="margin:12px 0 6px;">Trader POV</h3>
+            <p style="color:var(--muted); font-size:0.86rem;">Unlock live read-only trading dashboards or generate a share code for your mentor.</p>
+            <button class="btn-neon" style="width:100%;" onclick="openSubTool('toolPov')">Open Tool →</button>
+          </div>
+        </div>
+
+        <div class="grid-3">
+          <div class="card" style="margin:0; opacity:0.65;"><span class="tag-elite">COMING SOON</span><h4>AI Trade Analyser</h4><small style="color:var(--muted);">● In Development</small></div>
+          <div class="card" style="margin:0; opacity:0.65;"><span class="tag-elite">COMING SOON</span><h4>Demo Trading</h4><small style="color:var(--muted);">● In Development</small></div>
+          <div class="card" style="margin:0; opacity:0.65;"><span class="tag-elite">COMING SOON</span><h4>Correlation Matrix</h4><small style="color:var(--muted);">● In Development</small></div>
+        </div>
+      </div>
+
+      <!-- SUB-TOOL A: POSITION SIZE CALCULATOR -->
+      <div id="toolCalc" style="display:none;">
+        <button class="icon-btn" style="margin-bottom:14px;" onclick="closeSubTool()">← Back to Tools</button>
+        <div class="grid-2">
+          <div class="card" style="margin:0;">
+            <h3 style="margin:0 0 14px;">Position Size Calculator</h3>
+            <label>Account Balance ($)</label>
+            <input type="number" id="calcBal" value="10000" class="form-input" style="margin-bottom:12px;">
+            <label>Risk Percentage: <strong id="calcRiskLbl" class="win">1%</strong></label>
+            <input type="range" id="calcRisk" min="0.5" max="5" step="0.5" value="1" oninput="document.getElementById('calcRiskLbl').innerText=this.value+'%'" style="width:100%; margin:8px 0 12px;">
+            <label>Stop Loss Distance (pips)</label>
+            <input type="number" id="calcSl" value="20" class="form-input" style="margin-bottom:12px;">
+            <label>Trading Instrument</label>
+            <select id="calcPair" class="form-input" style="margin-bottom:16px;">
+              <option value="10">XAUUSD / EURUSD / GBPUSD ($10/pip)</option>
+              <option value="9.1">USDJPY ($9.10/pip)</option>
+              <option value="1">Indices / NAS100 ($1/point)</option>
+            </select>
+            <button class="btn-neon" style="width:100%;" onclick="calculateLotSize()">Calculate Position Size</button>
+          </div>
+          <div class="card" style="margin:0; display:flex; flex-direction:column; justify-content:center; text-align:center;" id="calcResultBox">
+            <h3 style="margin:0 0 8px;">Enter Your Parameters</h3>
+            <p style="color:var(--muted); font-size:0.88rem;">Most professionals risk 1–2% per trade. Always define your stop loss before entering.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-TOOL B: FOREX MARKET HOURS -->
+      <div id="toolHours" style="display:none;">
+        <button class="icon-btn" style="margin-bottom:14px;" onclick="closeSubTool()">← Back to Tools</button>
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <div><h3 style="margin:0;">Forex Market Hours</h3><small style="color:var(--muted);">Live global session tracker (IST / UTC)</small></div>
+            <span class="tag-pro" id="activeSessionPill">● LIVE SESSIONS</span>
+          </div>
+          <div id="sessionRows" style="display:flex; flex-direction:column; gap:12px;"></div>
+        </div>
+      </div>
+
+      <!-- SUB-TOOL C: TRADER POV -->
+      <div id="toolPov" style="display:none;">
+        <button class="icon-btn" style="margin-bottom:14px;" onclick="closeSubTool()">← Back to Tools</button>
+        <div class="card">
+          <h3 style="margin:0 0 6px;">Trader POV — Read-Only Dashboard Sharing</h3>
+          <p style="color:var(--muted); font-size:0.86rem;">Share your personal code with a mentor or enter a peer's <code>VIEW-XXXXXX</code> code below.</p>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin:14px 0;">
+            <div style="background:var(--card-2); padding:10px 14px; border-radius:9px; border:1px solid var(--border);">Your Share Code: <strong id="myPovCode" class="win">VIEW-P2PFX1</strong></div>
+            <input type="text" id="povInputCode" placeholder="Enter VIEW-XXXXXX" class="form-input" style="width:200px; margin:0;">
+            <button class="btn-neon" onclick="unlockPov()">Unlock Dashboard</button>
+          </div>
+          <div id="povResultArea" style="padding:24px; text-align:center; background:var(--card-2); border-radius:12px; color:var(--muted);">
+            Select or enter a shared dashboard code above to load their live performance view.
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- ==================== 12. SETTINGS (5 SUB-TABS) ==================== -->
+    <div id="view-settings" class="page-view">
+      <div class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div class="sb-avatar" style="width:48px; height:48px; font-size:1.2rem;" id="setAvatar">M</div>
+          <div>
+            <h3 style="margin:0;" id="setFullName">Trader Name</h3>
+            <small style="color:var(--muted);" id="setHandle">@trader • Joined 2026</small>
+          </div>
+        </div>
+        <button class="icon-btn" onclick="editTraderName()">✎ Edit Profile</button>
+      </div>
+
+      <div class="pill-row" style="margin-bottom:16px;">
+        <button class="pill active" onclick="switchSettingsTab('stProfile', this)">Profile & Rules</button>
+        <button class="pill" onclick="switchSettingsTab('stMt5', this)">MT5/MT4</button>
+        <button class="pill" onclick="switchSettingsTab('stPrivacy', this)">Privacy Settings</button>
+        <button class="pill" onclick="switchSettingsTab('stBilling', this)">Billing</button>
+        <button class="pill" onclick="switchSettingsTab('stSecurity', this)">Security</button>
+      </div>
+
+      <div id="stProfile" class="st-tab card">
+        <h4 style="margin:0 0 12px;">Trading Rules (Personal Risk Ceiling)</h4>
+        <div class="grid-3">
+          <div style="background:var(--card-2); padding:12px; border-radius:10px;"><small style="color:var(--muted);">MAX RISK / TRADE</small><div style="font-size:1.2rem; font-weight:800;">5%</div></div>
+          <div style="background:var(--card-2); padding:12px; border-radius:10px;"><small style="color:var(--muted);">MAX TRADES / DAY</small><div style="font-size:1.2rem; font-weight:800;">10</div></div>
+          <div style="background:var(--card-2); padding:12px; border-radius:10px;"><small style="color:var(--muted);">MAX DAILY LOSS</small><div style="font-size:1.2rem; font-weight:800;">10%</div></div>
+        </div>
+      </div>
+
+      <div id="stMt5" class="st-tab card" style="display:none; text-align:center; padding:36px;">
+        <h3>MT4/MT5 Auto-Sync Connection</h3>
+        <p style="color:var(--muted);">Upgrade to Pro or Elite to link your MetaTrader investor password for automatic real-time trade syncing.</p>
+        <button class="btn-neon" onclick="showPage('subscription', 'Subscription')">View Pro Plans</button>
+      </div>
+
+      <div id="stPrivacy" class="st-tab card" style="display:none;">
+        <h4 style="margin:0 0 14px;">Privacy Controls</h4>
+        <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border);"><span>Profile Visibility</span><label class="switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+        <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border);"><span>Show on Leaderboard</span><label class="switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+        <div style="display:flex; justify-content:space-between; padding:10px 0;"><span>Show Individual Trades</span><label class="switch"><input type="checkbox" checked><span class="slider"></span></label></div>
+      </div>
+
+      <div id="stBilling" class="st-tab card" style="display:none;">
+        <h4 style="margin:0 0 8px;">Current Plan</h4>
+        <p id="billingPlanText" style="color:var(--green); font-weight:700;">7-Day Free Trial Active (Full Pro & Elite Access)</p>
+        <button class="btn-neon" onclick="showPage('subscription', 'Subscription')">Manage / Upgrade Plan</button>
+      </div>
+
+      <div id="stSecurity" class="st-tab card" style="display:none;">
+        <h4 style="margin:0 0 12px;">Session Security</h4>
+        <p style="color:var(--muted); font-size:0.86rem;">Active Session: <strong>Current Browser Device</strong> <span class="tag-pro">ACTIVE</span></p>
+        <button class="btn-red" onclick="logoutUser()">Sign Out of Session</button>
+      </div>
+    </div>
+
+    <!-- ==================== 13. HELP & SUPPORT (11 FAQS) ==================== -->
+    <div id="view-support" class="page-view">
+      <div class="grid-2">
+        <div class="card" style="margin:0;">
+          <h3 style="margin:0 0 12px;">Contact Us</h3>
+          <p style="color:var(--muted); font-size:0.86rem;">Need help with onboarding, billing, or trade imports? Reach our team directly:</p>
+          <div style="margin:12px 0; padding:12px; background:var(--card-2); border-radius:10px;">
+            <small style="color:var(--muted);">Email Support</small><br><strong>pipetoprofit@gmail.com</strong>
+          </div>
+          <a href="https://wa.me" target="_blank" class="btn-neon" style="text-decoration:none;">💬 WhatsApp Support (+91 7506532473)</a>
+        </div>
+        <div class="card" style="margin:0;">
+          <h3 style="margin:0 0 12px;">Support Expectations</h3>
+          <p style="color:var(--muted); font-size:0.86rem;">• Most support emails & WhatsApp queries receive a reply within 24 hours.<br>• System Status: <strong class="win">● All Systems Operational</strong></p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:18px;">
+        <h3 style="margin:0 0 14px;">Frequently Asked Questions</h3>
+        <div id="helpFaqList" class="grid-2" style="margin:0;"></div>
+      </div>
+    </div>
+
+    <!-- ==================== 14. SUBSCRIPTION & COMPARE ALL FEATURES ==================== -->
+    <div id="view-subscription" class="page-view">
+      <div style="text-align:center; margin-bottom:24px;">
+        <h2 style="margin:0 0 6px;">Simple, transparent pricing</h2>
+        <p style="color:var(--muted); margin:0 0 14px;">All new members get a 7-Day Free Trial of AI Reports & Backtesting!</p>
+        <div style="display:inline-flex; align-items:center; gap:10px;">
+          <span>Monthly</span>
+          <label class="switch"><input type="checkbox" id="billingToggle" onchange="togglePricing()"><span class="slider"></span></label>
+          <span>Yearly <span class="tag-pro">Save 17%</span></span>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="card" style="margin:0;">
+          <span class="tag-pro">FREE FOREVER</span>
+          <h3>Free</h3>
+          <div style="font-size:2rem; font-weight:800;">$0 <small style="font-size:0.85rem; color:var(--muted);">/month</small></div>
+          <p style="color:var(--muted); font-size:0.84rem;">✓ Manual trade journal & calendar<br>✓ Complete free economic news<br>✓ Position size & market hours tools</p>
+          <button class="icon-btn" style="width:100%;">Included Free</button>
+        </div>
+        <div class="card" style="margin:0; border-color:var(--green);">
+          <span class="tag-pro">MOST POPULAR</span>
+          <h3>Pro</h3>
+          <div style="font-size:2rem; font-weight:800;" id="proPrice">$12.99 <small style="font-size:0.85rem; color:var(--muted);">/month</small></div>
+          <p style="color:var(--muted); font-size:0.84rem;">✓ Unlimited AI Trade Insights<br>✓ 3 MT4/MT5 auto-sync accounts<br>✓ Traders Lounge access</p>
+          <a href="https://wa.me?text=Hi%20P2P%20FX%20Terminal,%20I%20want%20to%20upgrade%20to%20Pro" target="_blank" class="btn-neon" style="width:100%; text-decoration:none;">Upgrade to Pro</a>
+        </div>
+        <div class="card" style="margin:0; border-color:var(--red);">
+          <span class="tag-elite">ELITE EDGE</span>
+          <h3>Elite</h3>
+          <div style="font-size:2rem; font-weight:800;" id="elitePrice">$22.99 <small style="font-size:0.85rem; color:var(--muted);">/month</small></div>
+          <p style="color:var(--muted); font-size:0.84rem;">✓ Everything in Pro<br>✓ Unlimited Bar Replay Backtesting<br>✓ VIP Mentor Support</p>
+          <a href="https://wa.me?text=Hi%20P2P%20FX%20Terminal,%20I%20want%20to%20upgrade%20to%20Elite" target="_blank" class="btn-red" style="width:100%; text-decoration:none; display:inline-block; text-align:center;">Upgrade to Elite</a>
+        </div>
+      </div>
+
+      <div class="card" style="overflow-x:auto;">
+        <h3 style="margin:0 0 12px;">Compare all features</h3>
+        <table>
+          <thead><tr><th>FEATURES</th><th>FREE</th><th>PRO</th><th>ELITE</th></tr></thead>
+          <tbody>
+            <tr><td>Connected Accounts</td><td>Manual only</td><td>3 accounts</td><td>Unlimited</td></tr>
+            <tr><td>AI Trade Insights & Reports</td><td>7-Day Free Trial</td><td>Unlimited ✓</td><td>Unlimited ✓</td></tr>
+            <tr><td>Bar Replay Backtesting</td><td>7-Day Free Trial</td><td>7-Day Free Trial</td><td>Unlimited ✓</td></tr>
+            <tr><td>Economic News Calendar</td><td>Complete Free ✓</td><td>Complete ✓</td><td>Complete ✓</td></tr>
+            <tr><td>Community Lounge & Leaderboard</td><td>Leaderboard ✓</td><td>Full Access ✓</td><td>VIP Access ✓</td></tr>
+            <tr><td>Support</td><td>Email Support</td><td>Chat Support</td><td>Mentor & Priority</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- END .content-scroll -->
+
+  <!-- BOTTOM LIVE ECONOMIC NEWS TICKER -->
+  <div class="news-ticker">
+    <span class="news-badge">NEWS</span>
+    <marquee behavior="scroll" direction="left" scrollamount="4" style="color:var(--muted);">
+      <strong style="color:var(--text);">USD</strong> Core Retail Sales m/m (High Impact) •
+      <strong style="color:var(--text);">EUR</strong> ECB President Lagarde Speech •
+      <strong style="color:var(--text);">GBP</strong> CPI y/y Inflation Data •
+      <strong style="color:var(--text);">XAUUSD</strong> Gold holds key institutional liquidity zone •
+      <strong style="color:var(--text);">INR</strong> RBI Monetary Policy Update
+    </marquee>
+  </div>
+</div><!-- END .main-wrap -->
+
+<!-- + ADD TRADE MODAL (MATCHING SCREENSHOT) -->
+<dialog id="addTradeModal">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+    <h3 style="margin:0;">+ Add Trade</h3>
+    <button class="icon-btn" onclick="document.getElementById('addTradeModal').close()">✕</button>
+  </div>
+  <form id="newTradeForm">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+      <button type="button" id="btnSideLong" class="btn-neon" onclick="setModalSide('Long')">↗ Long</button>
+      <button type="button" id="btnSideShort" class="icon-btn" onclick="setModalSide('Short')">↘ Short</button>
+    </div>
+    <input type="hidden" id="mSide" value="Long">
+
+    <div class="grid-2" style="margin-bottom:10px; gap:10px;">
+      <div><label style="font-size:0.75rem; color:var(--muted);">SYMBOL</label><input type="text" id="mSymbol" placeholder="E.G. XAUUSD" class="form-input" required></div>
+      <div><label style="font-size:0.75rem; color:var(--muted);">QUANTITY (LOTS)</label><input type="number" step="any" id="mQty" placeholder="0.10" class="form-input" required></div>
+      <div><label style="font-size:0.75rem; color:var(--muted);">ENTRY PRICE</label><input type="number" step="any" id="mEntry" placeholder="0.00" class="form-input" required></div>
+      <div><label style="font-size:0.75rem; color:var(--muted);">EXIT PRICE (Optional = Open)</label><input type="number" step="any" id="mExit" placeholder="Leave blank if open" class="form-input"></div>
+      <div><label style="font-size:0.75rem; color:var(--muted);">ENTRY DATE</label><input type="date" id="mEntryDate" class="form-input" required></div>
+      <div><label style="font-size:0.75rem; color:var(--muted);">EXIT DATE (Optional)</label><input type="date" id="mExitDate" class="form-input"></div>
+    </div>
+
+    <details style="margin-bottom:10px; background:var(--card-2); padding:8px 12px; border-radius:9px;">
+      <summary style="cursor:pointer; font-size:0.82rem; font-weight:600;">Pre-Trade Checklist (Optional)</summary>
+      <div style="font-size:0.8rem; margin-top:8px; display:flex; flex-direction:column; gap:5px;">
+        <label><input type="checkbox" id="chkTrend"> Aligned with Higher Timeframe Trend</label>
+        <label><input type="checkbox" id="chkRisk"> Risk within 1–2% rule</label>
+        <label><input type="checkbox" id="chkConfirm"> Entry confirmation candle closed</label>
+      </div>
+    </details>
+
+    <label style="font-size:0.75rem; color:var(--muted);">NOTES & SETUP TAG</label>
+    <input type="text" id="mSetup" placeholder="Setup tag (e.g. London Breakout, Liquidity Sweep)" class="form-input" style="margin-bottom:8px;">
+    <textarea id="mNotes" rows="2" placeholder="Trade rationale, entry/exit notes..." class="form-input" style="margin-bottom:14px;"></textarea>
+    <button type="submit" class="btn-neon" style="width:100%; padding:12px;">Save Trade to Terminal</button>
+  </form>
+</dialog>
+    <!-- ==================== 12. SETTINGS (5 SUB-TABS) ==================== -->
+    <section id="view-settings" class="page-view">
+      <div class="card" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom:16px;">
+        <div style="display:flex; align-items:center; gap:14px;">
+          <div id="setAvatar" style="width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,#00ff88,#ff2a5f); color:#040706; font-weight:900; font-size:1.3rem; display:grid; place-items:center;">M</div>
+          <div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <strong id="setFullName" style="font-size:1.15rem;">Trader</strong>
+              <span id="setPlanBadge" class="badge-green">FREE TRIAL (7D)</span>
+            </div>
+            <div style="color:var(--muted); font-size:0.82rem;"><span id="setHandle">@trader</span> • Joined 2026</div>
+          </div>
+        </div>
+        <button class="btn-outline" onclick="editProfilePrompt()">✎ Edit Profile</button>
+      </div>
+
+      <div class="pill-tabs" style="margin-bottom:16px;">
+        <button class="pill-tab active" onclick="switchSettingsTab('set-profile', this)">Profile</button>
+        <button class="pill-tab" onclick="switchSettingsTab('set-mt5', this)">MT5/MT4</button>
+        <button class="pill-tab" onclick="switchSettingsTab('set-privacy', this)">Settings</button>
+        <button class="pill-tab" onclick="switchSettingsTab('set-billing', this)">Billing</button>
+        <button class="pill-tab" onclick="switchSettingsTab('set-security', this)">Security</button>
+      </div>
+
+      <!-- Sub-tab 1: Profile & Trading Rules -->
+      <div id="set-profile" class="set-sub">
+        <div class="card" style="margin-bottom:16px; border-color:rgba(0,255,136,0.35);">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div>
+              <strong>AI-Powered Trading Reports</strong>
+              <p style="color:var(--muted); font-size:0.84rem; margin:4px 0 0;">Get personalized insights on your win rate, emotional patterns, and risk habits.</p>
+            </div>
+            <button class="btn-neon" onclick="navTo('ai-report')">Open AI Report →</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <span>Trading Rules</span>
+            <button class="btn-outline" style="padding:5px 12px; font-size:0.8rem;" onclick="editRulesPrompt()">Edit Rules</button>
+          </div>
+          <div class="grid-5" id="rulesGrid">
+            <div class="stat-mini"><small>MAX RISK / TRADE</small><strong id="rRisk">5%</strong></div>
+            <div class="stat-mini"><small>MAX TRADES / DAY</small><strong id="rTrades">10</strong></div>
+            <div class="stat-mini"><small>MAX DAILY LOSS</small><strong id="rLoss">10%</strong></div>
+            <div class="stat-mini"><small>LOSING STREAK</small><strong id="rStreak">5 in a row</strong></div>
+            <div class="stat-mini"><small>RISK / REWARD</small><strong id="rRR">1:4</strong></div>
+          </div>
+        </div>
+      </div>
+      <!-- Sub-tab 2: MT5/MT4 -->
+      <div id="set-mt5" class="set-sub" style="display:none;">
+        <div class="card" style="text-align:center; padding:42px 20px;">
+          <div style="font-size:2rem; margin-bottom:10px;">🔗</div>
+          <h3 style="margin:0 0 8px;">MT4/MT5 Connection</h3>
+          <p style="color:var(--muted); max-width:460px; margin:0 auto 18px; font-size:0.9rem;">Upgrade to Pro to connect your MT4/MT5 account via read-only investor password and sync trades automatically.</p>
+          <button class="btn-neon" onclick="navTo('subscription')">Upgrade to Pro</button>
+        </div>
+      </div>
+
+      <!-- Sub-tab 3: Privacy Settings -->
+      <div id="set-privacy" class="set-sub" style="display:none;">
+        <div class="card">
+          <h4 style="margin:0 0 14px;">Privacy</h4>
+          <div class="toggle-row"><div><strong>Profile Visibility</strong><br><small style="color:var(--muted);">Allow other community traders to view your public profile</small></div><input type="checkbox" checked></div>
+          <div class="toggle-row"><div><strong>Show on Leaderboard</strong><br><small style="color:var(--muted);">Display your verified P&L and win rate on the community leaderboard</small></div><input type="checkbox" checked></div>
+          <div class="toggle-row"><div><strong>Show Trades</strong><br><small style="color:var(--muted);">Allow followers to inspect your shared journal entries</small></div><input type="checkbox"></div>
+        </div>
+      </div>
+
+      <!-- Sub-tab 4: Billing -->
+      <div id="set-billing" class="set-sub" style="display:none;">
+        <div class="card" style="margin-bottom:16px;">
+          <small style="color:var(--muted);">CURRENT PLAN</small>
+          <h3 id="billingPlanTitle" style="margin:6px 0;">FREE — Free forever (+ 7-Day Pro/Elite Trial)</h3>
+          <button class="btn-neon" style="margin-top:8px;" onclick="navTo('subscription')">Upgrade Your Plan</button>
+        </div>
+      </div>
+
+      <!-- Sub-tab 5: Security -->
+      <div id="set-security" class="set-sub" style="display:none;">
+        <div class="card">
+          <h4 style="margin:0 0 14px;">Session Security</h4>
+          <div class="toggle-row"><div><strong>Session Alerts</strong><br><small style="color:var(--muted);">Send email notification when a new device signs in</small></div><input type="checkbox" checked></div>
+          <div style="margin-top:16px; padding:12px; background:var(--bg); border:1px solid var(--border); border-radius:10px; display:flex; justify-content:space-between; align-items:center;">
+            <div><strong>Current Browser Session</strong> <span class="badge-green">Current</span><br><small style="color:var(--muted);">Active on P2P FX Terminal Web</small></div>
+            <button class="btn-red" style="padding:7px 14px; font-size:0.82rem;" onclick="logoutUser()">Sign Out</button>
+          </div>
+        </div>
+      </div>
+    </section>
+    <!-- ==================== 13. HELP & SUPPORT (ALL 11 FAQS) ==================== -->
+    <section id="view-help" class="page-view">
+      <div class="grid-2" style="margin-bottom:18px;">
+        <div class="card">
+          <div class="card-head"><span>Contact Us</span><span class="badge-green">● All Systems Operational</span></div>
+          <p style="color:var(--muted); font-size:0.88rem;">Need direct help from the P2P FX Terminal team? Reach out via email or WhatsApp.</p>
+          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
+            <a href="mailto:pipetoprofit@gmail.com" class="btn-outline">✉ pipetoprofit@gmail.com</a>
+            <a href="https://wa.me" target="_blank" class="btn-neon">💬 WhatsApp: +91 7506532473</a>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><span>Support Expectations</span></div>
+          <ul style="margin:0; padding-left:18px; color:var(--muted); font-size:0.88rem; line-height:1.8;">
+            <li>Free & Community members: Response within 24 hours</li>
+            <li>Pro & Elite subscribers: Priority WhatsApp & mentor support</li>
+            <li>Bug reports are reviewed daily by our engineering team</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin:0 0 16px;">Frequently Asked Questions</h3>
+        <div class="grid-2">
+          <details class="faq-box" open><summary><span class="faq-tag">GETTING STARTED</span> How do I connect my MT5 account?</summary><p>Navigate to Profile → Accounts tab, click 'Connect Account', and enter your MT5 credentials. We use MetaAPI for secure, read-only access to your trading data.</p></details>
+          <details class="faq-box"><summary><span class="faq-tag">GETTING STARTED</span> What brokers are supported?</summary><p>We support all brokers compatible with MetaAPI, which includes most major MT4/MT5 brokers worldwide. Check MetaAPI's broker list for full compatibility.</p></details>
+          <details class="faq-box"><summary><span class="faq-tag">SECURITY</span> How is my data protected?</summary><p>We use bank-level encryption, never store your broker passwords, and only have read-only access to your trading data. Your data is never shared with third parties.</p></details>
+          <details class="faq-box"><summary><span class="faq-tag">FEATURES</span> Can I export my journal entries?</summary><p>Yes! Go to Journal → click the export button in the top right. You can export as CSV, PDF, or JSON format for your records.</p></details>
+          <details class="faq-box"><summary><span class="faq-tag">FEATURES</span> How do I choose, move or resize columns in the trades table?</summary><p>Open Trades and click View. Tick the columns you want, drag them into order, and pick a row height and page size. You can also drag a column header to move it, drag its edge to resize it, and Shift+click headers to sort by more than one column. Your layout is saved to your account and follows you to every device.</p></details>
+          <details class="faq-box"><summary><span class="faq-tag">FEATURES</span> Can I see totals for a group of trades?</summary><p>Drag across cells in the trades table, or click one and Shift+click another, to see their sum, average, minimum and maximum below the table. Press Ctrl+C (Cmd+C on Mac) to copy them or click Chart to plot them. Tick rows to copy them or export them to Excel or CSV.</p></details>
+          <details class="faq-box"><summary><span class="faq-tag">FEATURES</span> How do I arrange journal and trade analysis sections?</summary><p>Journal entries and Trade Analysis have an Arrange button. Use it to choose which sections are visible and reorder them. Your layout is saved to your account.</p></details>
+          <details class="faq-box"><summary><span class="faq-tag">BILLING</span> What's included in the Pro plan?</summary><p>Pro includes up to 3 connected MT4/MT5 accounts, unlimited trade history, advanced analytics, AI trade insights, and priority support. Upgrade to Elite for unlimited accounts and multi-account views. Cancel anytime.</p></details>
+          <details class="faq-box"><summary><span class="faq-tag">BILLING</span> How do I cancel my subscription?</summary><p>Go to Profile → Billing tab and click 'Manage Subscription'. You can cancel anytime and will retain access until the end of your billing period.</p></details>
+          <details class="faq-box"><summary><span class="faq-tag">ACCOUNT</span> How do I reset my password?</summary><p>Click 'Forgot Password' on the login page, enter your email, and follow the reset link sent to your inbox. For security, links expire after 1 hour.</p></details>
+          <details class="faq-box"><summary><span class="faq-tag">TROUBLESHOOTING</span> Why are my trades not syncing?</summary><p>Ensure your investor password is read-only and active on your broker's server, or use '+ Add Trade' / CSV Import anytime for instant manual logging.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 14. SUBSCRIPTION PRICING ==================== -->
+    <section id="view-subscription" class="page-view">
+      <div style="text-align:center; margin-bottom:24px;">
+        <h2 style="margin:0 0 6px;">Simple, transparent pricing</h2>
+        <p style="color:var(--muted); margin:0 0 16px;">Your first 7 days include full access to AI Reports & TradingView Bar Replay Backtesting.</p>
+        <div class="pill-tabs" style="justify-content:center;">
+          <button id="billMonthlyBtn" class="pill-tab active" onclick="toggleBilling('monthly')">Monthly</button>
+          <button id="billYearlyBtn" class="pill-tab" onclick="toggleBilling('yearly')">Yearly <span class="badge-green">Save 17%</span></button>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="card">
+          <strong>Free</strong>
+          <div style="font-size:2.2rem; font-weight:800; margin:8px 0;">$0 <small style="font-size:0.85rem; color:var(--muted);">/month</small></div>
+          <p style="color:var(--muted); font-size:0.84rem;">Core journal, calendar, economic news & calculators forever.</p>
+          <ul class="check-ul">
+            <li>✓ Unlimited manual trades & CSV/JSON export</li>
+            <li>✓ Full Economic Calendar & Position Calculator</li>
+            <li>✓ 7-Day Free Trial of AI Reports & Backtesting</li>
+          </ul>
+          <button class="btn-outline" style="width:100%; margin-top:14px;" disabled>Current Base Plan</button>
+        </div>
+
+        <div class="card" style="border:1.5px solid var(--green); box-shadow:0 0 30px rgba(0,255,136,0.12);">
+          <div style="display:flex; justify-content:space-between;"><strong style="color:var(--green);">Pro</strong><span class="badge-green">MOST POPULAR</span></div>
+          <div style="font-size:2.2rem; font-weight:800; margin:8px 0;"><span id="proPrice">$12.99</span> <small style="font-size:0.85rem; color:var(--muted);">/month</small></div>
+          <p style="color:var(--muted); font-size:0.84rem;">Unlock unlimited AI Trade Reports & Traders Lounge.</p>
+          <ul class="check-ul">
+            <li>✓ Unlimited AI-Powered Trade Reports</li>
+            <li>✓ Traders Lounge & VIP Idea Feed access</li>
+            <li>✓ 3 MT4/MT5 accounts & full analytics</li>
+          </ul>
+          <a href="https://wa.me" target="_blank" class="btn-neon" style="width:100%; margin-top:14px; text-align:center;">Upgrade to Pro via WhatsApp</a>
+        </div>
+
+        <div class="card">
+          <strong style="color:var(--red);">Elite</strong>
+          <div style="font-size:2.2rem; font-weight:800; margin:8px 0;"><span id="elitePrice">$24.99</span> <small style="font-size:0.85rem; color:var(--muted);">/month</small></div>
+          <p style="color:var(--muted); font-size:0.84rem;">Full TradingView Bar Replay Backtesting + VIP Mentorship.</p>
+          <ul class="check-ul">
+            <li>✓ Everything in Pro</li>
+            <li>✓ Unlimited TradingView Bar Replay Backtesting</li>
+            <li>✓ Unlimited MT4/MT5 accounts & 1-on-1 support</li>
+          </ul>
+          <a href="https://wa.me" target="_blank" class="btn-red" style="width:100%; margin-top:14px; text-align:center;">Upgrade to Elite via WhatsApp</a>
+        </div>
+      </div>
+    </section>
+
+  </main><!-- END .main-content -->
+</div><!-- END .app-layout -->
+          <details class="faq-box"><summary><span class="faq-tag">FEATURES</span> How do I arrange journal and trade analysis sections?</summary><p>Journal entries and Trade Analysis have an Arrange button. Use it to choose which sections are visible and reorder them. Your layout is saved to your account.</p></details>
+          <details class="faq-box"><summary><span class="faq-tag">BILLING</span> What's included in the Pro plan?</summary><p>Pro includes up to 3 connected MT4/MT5 accounts, unlimited trade history, advanced analytics, AI trade insights, and priority support. Upgrade to Elite for unlimited accounts and multi-account views. Cancel anytime.</p></details>
+          <details class="faq-box"><summary><span class="faq-tag">BILLING</span> How do I cancel my subscription?</summary><p>Go to Profile → Billing tab and click 'Manage Subscription'. You can cancel anytime and will retain access until the end of your billing period.</p></details>
+          <details class="faq-box"><summary><span class="faq-tag">ACCOUNT</span> How do I reset my password?</summary><p>Click 'Forgot Password' on the login page, enter your email, and follow the reset link sent to your inbox. For security, links expire after 1 hour.</p></details>
+          <details class="faq-box"><summary><span class="faq-tag">TROUBLESHOOTING</span> Why are my trades not syncing?</summary><p>Ensure your investor password is read-only and active on your broker's server, or use '+ Add Trade' / CSV Import anytime for instant manual logging.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 14. SUBSCRIPTION PRICING ==================== -->
+    <section id="view-subscription" class="page-view">
+      <div style="text-align:center; margin-bottom:24px;">
+        <h2 style="margin:0 0 6px;">Simple, transparent pricing</h2>
+        <p style="color:var(--muted); margin:0 0 16px;">Your first 7 days include full access to AI Reports & TradingView Bar Replay Backtesting.</p>
+        <div class="pill-tabs" style="justify-content:center;">
+          <button id="billMonthlyBtn" class="pill-tab active" onclick="toggleBilling('monthly')">Monthly</button>
+          <button id="billYearlyBtn" class="pill-tab" onclick="toggleBilling('yearly')">Yearly <span class="badge-green">Save 17%</span></button>
+        </div>
+      </div>
+
+      <div class="grid-3">
+        <div class="card">
+          <strong>Free</strong>
+          <div style="font-size:2.2rem; font-weight:800; margin:8px 0;">$0 <small style="font-size:0.85rem; color:var(--muted);">/month</small></div>
+          <p style="color:var(--muted); font-size:0.84rem;">Core journal, calendar, economic news & calculators forever.</p>
+          <ul class="check-ul">
+            <li>✓ Unlimited manual trades & CSV/JSON export</li>
+            <li>✓ Full Economic Calendar & Position Calculator</li>
+            <li>✓ 7-Day Free Trial of AI Reports & Backtesting</li>
+          </ul>
+          <button class="btn-outline" style="width:100%; margin-top:14px;" disabled>Current Base Plan</button>
+        </div>
+
+        <div class="card" style="border:1.5px solid var(--green); box-shadow:0 0 30px rgba(0,255,136,0.12);">
+          <div style="display:flex; justify-content:space-between;"><strong style="color:var(--green);">Pro</strong><span class="badge-green">MOST POPULAR</span></div>
+          <div style="font-size:2.2rem; font-weight:800; margin:8px 0;"><span id="proPrice">$12.99</span> <small style="font-size:0.85rem; color:var(--muted);">/month</small></div>
+          <p style="color:var(--muted); font-size:0.84rem;">Unlock unlimited AI Trade Reports & Traders Lounge.</p>
+          <ul class="check-ul">
+            <li>✓ Unlimited AI-Powered Trade Reports</li>
+            <li>✓ Traders Lounge & VIP Idea Feed access</li>
+            <li>✓ 3 MT4/MT5 accounts & full analytics</li>
+          </ul>
+          <a href="https://wa.me" target="_blank" class="btn-neon" style="width:100%; margin-top:14px; text-align:center;">Upgrade to Pro via WhatsApp</a>
+        </div>
+
+        <div class="card">
+          <strong style="color:var(--red);">Elite</strong>
+          <div style="font-size:2.2rem; font-weight:800; margin:8px 0;"><span id="elitePrice">$24.99</span> <small style="font-size:0.85rem; color:var(--muted);">/month</small></div>
+          <p style="color:var(--muted); font-size:0.84rem;">Full TradingView Bar Replay Backtesting + VIP Mentorship.</p>
+          <ul class="check-ul">
+            <li>✓ Everything in Pro</li>
+            <li>✓ Unlimited TradingView Bar Replay Backtesting</li>
+            <li>✓ Unlimited MT4/MT5 accounts & 1-on-1 support</li>
+          </ul>
+          <a href="https://wa.me" target="_blank" class="btn-red" style="width:100%; margin-top:14px; text-align:center;">Upgrade to Elite via WhatsApp</a>
+        </div>
+      </div>
+    </section>
+
+  </main><!-- END .main-content -->
+</div><!-- END .app-layout -->
+<script>
+  // Session & 7-Day Free Trial Check
+  const userSession = JSON.parse(localStorage.getItem('p2p_fx_session')) || { name: 'Trader', email: 'trader@p2pfx.com', createdAt: new Date().toISOString() };
+  let trades = JSON.parse(localStorage.getItem('p2p_fx_terminal_trades')) || [];
+  let loungePosts = JSON.parse(localStorage.getItem('p2p_fx_lounge')) || [
+    { author: 'Shafee (Admin)', tag: 'XAUUSD • LONG', text: 'Gold holding above London session VWAP. Watching 15m liquidity sweep for continuation.', time: '2h ago' },
+    { author: 'Atal Shendge', tag: 'EURUSD • SHORT', text: 'Clean rejection from 4H supply zone during NY overlap. Risk managed at 1%.', time: '5h ago' }
+  ];
+
+  // Calculate 7-Day Free Trial Status
+  const signupTime = new Date(userSession.createdAt || Date.now()).getTime();
+  const daysElapsed = (Date.now() - signupTime) / (1000 * 60 * 60 * 24);
+  const trialDaysLeft = Math.max(0, Math.ceil(7 - daysElapsed));
+  const hasProAccess = trialDaysLeft > 0 || localStorage.getItem('p2p_fx_pro_active') === '1';
+
+  // Populate User Name & Clock
+  document.addEventListener('DOMContentLoaded', () => {
+    const init = (userSession.name || 'T').charAt(0).toUpperCase();
+    ['sideAvatar', 'topAvatar', 'setAvatar'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = init; });
+    ['sideUserName', 'setFullName'].forEach(id => { const el = document.getElementById(id); if (el) el.textContent = userSession.name || 'Trader'; });
+    const handleEl = document.getElementById('setHandle');
+    if (handleEl) handleEl.textContent = '@' + (userSession.name || 'trader').toLowerCase().replace(/\s+/g, '');
+
+    document.getElementById('fEntryDate').valueAsDate = new Date();
+    setInterval(() => {
+      const now = new Date();
+      const clk = document.getElementById('liveClock');
+      if (clk) clk.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }, 1000);
+
+    refreshAllViews();
+  });
+  // Navigation & Theme Switcher
+  function navTo(viewId, btn) {
+    document.querySelectorAll('.page-view').forEach(v => v.classList.remove('active'));
+    const target = document.getElementById('view-' + viewId);
+    if (target) target.classList.add('active');
+    if (btn) {
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+    const titleEl = document.getElementById('pageTitle');
+    if (titleEl) titleEl.textContent = viewId.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase());
+    refreshAllViews();
+  }
+
+  function toggleTheme() {
+    document.body.classList.toggle('light-mode');
+  }
+
+  function logoutUser() {
+    localStorage.removeItem('p2p_fx_session');
+    window.location.href = 'auth.html';
+  }
+
+  function setTradeSide(side) {
+    document.getElementById('fSide').value = side;
+    document.getElementById('btnSideLong').className = side === 'Long' ? 'btn-neon' : 'btn-outline';
+    document.getElementById('btnSideShort').className = side === 'Short' ? 'btn-red' : 'btn-outline';
+  }
+
+  // Save Trade (+ Add Trade Modal)
+  document.getElementById('newTradeForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const side = document.getElementById('fSide').value;
+    const symbol = document.getElementById('fSymbol').value.toUpperCase().trim();
+    const qty = parseFloat(document.getElementById('fQty').value);
+    const entry = parseFloat(document.getElementById('fEntry').value);
+    const exitRaw = document.getElementById('fExit').value;
+    const isOpen = exitRaw === '' || isNaN(parseFloat(exitRaw));
+    const exit = isOpen ? null : parseFloat(exitRaw);
+    const pnl = isOpen ? 0 : (side === 'Long' ? (exit - entry) * qty * 100 : (entry - exit) * qty * 100);
+
+    trades.unshift({
+      id: Date.now(),
+      symbol, side, qty, entry, exit, isOpen, pnl,
+      date: document.getElementById('fEntryDate').value,
+      exitDate: document.getElementById('fExitDate').value || '',
+      market: document.getElementById('fMarket').value,
+      emotion: document.getElementById('fEmotion').value,
+      notes: document.getElementById('fNotes').value || ''
+    });
+
+    localStorage.setItem('p2p_fx_terminal_trades', JSON.stringify(trades));
+    e.target.reset();
+    document.getElementById('fEntryDate').valueAsDate = new Date();
+    document.getElementById('addTradeModal').close();
+    refreshAllViews();
+  });
+  function refreshAllViews() {
+    const closed = trades.filter(t => !t.isOpen);
+    const open = trades.filter(t => t.isOpen);
+    const realized = closed.reduce((s, t) => s + t.pnl, 0);
+    const wins = closed.filter(t => t.pnl > 0);
+    const losses = closed.filter(t => t.pnl < 0);
+    const winRate = closed.length ? ((wins.length / closed.length) * 100).toFixed(1) : '0';
+
+    // Update Dashboard KPIs
+    const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    setTxt('kpiTotalPnl', (realized >= 0 ? '+$' : '-$') + Math.abs(realized).toFixed(2));
+    setTxt('kpiTotalTrades', trades.length + ' trades');
+    setTxt('kpiOpenCount', open.length + ' open positions');
+    setTxt('kpiRealized', (realized >= 0 ? '+$' : '-$') + Math.abs(realized).toFixed(2));
+    setTxt('kpiClosedCount', closed.length + ' closed trades');
+    setTxt('kpiWinRate', winRate + '%');
+    const bar = document.getElementById('kpiWinBar');
+    if (bar) bar.style.width = winRate + '%';
+
+    // Quick Stats
+    const avgW = wins.length ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
+    const avgL = losses.length ? losses.reduce((s, t) => s + t.pnl, 0) / losses.length : 0;
+    const best = closed.length ? Math.max(...closed.map(t => t.pnl)) : 0;
+    const worst = closed.length ? Math.min(...closed.map(t => t.pnl)) : 0;
+    setTxt('qsAvgWin', '+$' + avgW.toFixed(2));
+    setTxt('qsAvgLoss', '-$' + Math.abs(avgL).toFixed(2));
+    setTxt('qsBest', '+$' + best.toFixed(2));
+    setTxt('qsWorst', '-$' + Math.abs(worst).toFixed(2));
+
+    // Populate Trades Table
+    const tbody = document.getElementById('tradesTableBody');
+    if (tbody) {
+      tbody.innerHTML = trades.length ? trades.map(t => `
+        <tr>
+          <td>${t.date}</td>
+          <td><strong>${t.symbol}</strong></td>
+          <td><span class="${t.side === 'Long' ? 'badge-green' : 'badge-red'}">${t.side}</span></td>
+          <td>${t.entry}</td>
+          <td>${t.isOpen ? '<em>OPEN</em>' : t.exit}</td>
+          <td>${t.qty}</td>
+          <td class="${t.pnl >= 0 ? 'win' : 'loss'}">${t.isOpen ? '$0.00' : (t.pnl >= 0 ? '+$' : '-$') + Math.abs(t.pnl).toFixed(2)}</td>
+          <td>Manual</td>
+        </tr>`).join('') : '<tr><td colspan="8" style="text-align:center; padding:32px; color:var(--muted);">No trades logged yet. Click "+ Add Trade" to record your first position.</td></tr>';
+    }
+
+    // Check 7-Day Free Trial Gates on AI Report & Backtesting
+    const aiBadge = document.getElementById('aiTrialBadge');
+    const btBadge = document.getElementById('btTrialBadge');
+    if (aiBadge) aiBadge.textContent = hasProAccess ? `7-Day Free Trial (${trialDaysLeft}d left)` : 'Trial Expired — Upgrade to Pro';
+    if (btBadge) btBadge.textContent = hasProAccess ? `7-Day Free Trial (${trialDaysLeft}d left)` : 'Trial Expired — Upgrade to Elite';
+  }
+  // AI Report Generator (Free for 7 Days)
+  function generateAiReport() {
+    if (!hasProAccess) {
+      navTo('subscription');
+      return;
+    }
+    const out = document.getElementById('aiReportOutput');
+    if (!trades.length) {
+      out.innerHTML = '<div class="card" style="border-color:var(--red);">Log at least 1 trade first so the AI can analyze your win rate, symbol performance, and emotional patterns.</div>';
+      return;
+    }
+    const closed = trades.filter(t => !t.isOpen);
+    const total = closed.reduce((s, t) => s + t.pnl, 0);
+    const fomoTrades = trades.filter(t => t.emotion === 'FOMO' || t.emotion === 'Revenge').length;
+    const grade = total > 0 && fomoTrades === 0 ? 'A' : (total >= 0 ? 'B' : 'C');
+    out.innerHTML = `
+      <div class="card" style="border-color:var(--green);">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h3 style="margin:0;">AI Performance Diagnosis</h3>
+          <span class="badge-green" style="font-size:1.1rem;">Grade: ${grade}</span>
+        </div>
+        <p style="color:var(--muted); margin:10px 0;">Analyzed <strong>${trades.length}</strong> total trades (${closed.length} closed) with net P&L of <strong>$${total.toFixed(2)}</strong>.</p>
+        <ul class="check-ul">
+          <li>✓ <strong>Psychology Check:</strong> Detected ${fomoTrades} FOMO/Revenge trades. ${fomoTrades > 0 ? 'Eliminating impulsive entries will immediately boost your profit factor.' : 'Strong discipline across logged setups!'}</li>
+          <li>✓ <strong>Action Plan:</strong> Stick to your top-performing session, enforce your 5% max risk rule, and review your pre-trade checklist before every entry.</li>
+        </ul>
+      </div>`;
+  }
+
+  // TradingView-Style Bar Replay Simulator (Free for 7 Days)
+  let replayTimer = null, replayCandles = [], btPosition = null, btPnl = 0;
+  function toggleReplay() {
+    if (!hasProAccess) { navTo('subscription'); return; }
+    if (replayTimer) { clearInterval(replayTimer); replayTimer = null; return; }
+    replayTimer = setInterval(stepReplayCandle, 900);
+  }
+  function stepReplayCandle() {
+    if (!hasProAccess) { navTo('subscription'); return; }
+    const last = replayCandles[replayCandles.length - 1];
+    const next = +(last + (Math.random() - 0.48) * 3.5).toFixed(2);
+    replayCandles.push(next);
+    if (replayCandles.length > 28) replayCandles.shift();
+    drawReplayChart();
+  }
+  function drawReplayChart() {
+    const cvs = document.getElementById('replayCanvas');
+    if (!cvs) return;
+    const ctx = cvs.getContext('2d');
+    ctx.clearRect(0, 0, cvs.width, cvs.height);
+    const min = Math.min(...replayCandles) - 2, max = Math.max(...replayCandles) + 2;
+    const w = cvs.width / replayCandles.length;
+    replayCandles.forEach((val, i) => {
+      const prev = i > 0 ? replayCandles[i - 1] : val;
+      const isUp = val >= prev;
+      ctx.fillStyle = isUp ? '#00ff88' : '#ff2a5f';
+      const y1 = cvs.height - ((val - min) / (max - min)) * (cvs.height - 20) - 10;
+      const y2 = cvs.height - ((prev - min) / (max - min)) * (cvs.height - 20) - 10;
+      ctx.fillRect(i * w + 4, Math.min(y1, y2), Math.max(6, w - 8), Math.max(4, Math.abs(y1 - y2)));
+    });
+  }
+  function placeBtOrder(dir) {
+    if (!hasProAccess) { navTo('subscription'); return; }
+    const price = replayCandles[replayCandles.length - 1];
+    if (!btPosition) {
+      btPosition = { dir, price };
+      alert(`Backtest ${dir} opened at ${price}`);
+    } else {
+      const diff = btPosition.dir === 'BUY' ? (price - btPosition.price) * 100 : (btPosition.price - price) * 100;
+      btPnl += diff;
+      btPosition = null;
+      const el = document.getElementById('btNetPnl');
+      if (el) el.textContent = (btPnl >= 0 ? '+$' : '-$') + Math.abs(btPnl).toFixed(2);
+    }
+  }
+  // Position Size Calculator
+  function calcPositionSize() {
+    const bal = parseFloat(document.getElementById('calcBal').value) || 10000;
+    const riskPct = parseFloat(document.getElementById('calcRisk').value) || 1;
+    const sl = parseFloat(document.getElementById('calcSl').value) || 20;
+    const pipVal = parseFloat(document.getElementById('calcPipVal').value) || 10;
+    const riskUsd = bal * (riskPct / 100);
+    const stdLots = riskUsd / (sl * pipVal);
+    document.getElementById('calcResultBox').innerHTML = `
+      <div style="text-align:center; padding:16px;">
+        <small style="color:var(--muted);">RECOMMENDED POSITION SIZE</small>
+        <div style="font-size:2.4rem; font-weight:900; color:var(--green); margin:6px 0;">${stdLots.toFixed(2)} Lots</div>
+        <div class="grid-3" style="margin-top:14px;">
+          <div class="stat-mini"><small>RISK AMOUNT</small><strong>$${riskUsd.toFixed(2)}</strong></div>
+          <div class="stat-mini"><small>MINI LOTS</small><strong>${(stdLots * 10).toFixed(2)}</strong></div>
+          <div class="stat-mini"><small>UNITS</small><strong>${Math.round(stdLots * 100000).toLocaleString()}</strong></div>
+        </div>
+      </div>`;
+  }
+
+  // Settings Sub-tabs & Billing Toggle
+  function switchSettingsTab(subId, btn) {
+    document.querySelectorAll('.set-sub').forEach(s => s.style.display = 'none');
+    document.getElementById(subId).style.display = 'block';
+    btn.parentElement.querySelectorAll('.pill-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  function toggleBilling(cycle) {
+    document.getElementById('billMonthlyBtn').classList.toggle('active', cycle === 'monthly');
+    document.getElementById('billYearlyBtn').classList.toggle('active', cycle === 'yearly');
+    document.getElementById('proPrice').textContent = cycle === 'yearly' ? '$10.99' : '$12.99';
+    document.getElementById('elitePrice').textContent = cycle === 'yearly' ? '$19.99' : '$24.99';
+  }
+  function editProfilePrompt() {
+    const n = prompt('Enter your Trader Display Name:', userSession.name || 'Trader');
+    if (n && n.trim()) {
+      userSession.name = n.trim();
+      localStorage.setItem('p2p_fx_session', JSON.stringify(userSession));
+      location.reload();
+    }
+  }
+  function editRulesPrompt() {
+    const r = prompt('Max Risk per Trade (%):', '5%');
+    if (r) document.getElementById('rRisk').textContent = r;
+  }
+</script>
+</body>
+</html>
