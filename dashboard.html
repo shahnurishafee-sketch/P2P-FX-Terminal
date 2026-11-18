@@ -433,7 +433,8 @@
     NIFTY:  { base: 24350.0, step: 28.0, dec: 1, mult: 25 }
   };
 
-  var tfMultipliers = { '1m': 0.35, '3m': 0.55, '5m': 0.75, '15m': 1.0, '30m': 1.35, '1H': 1.8, '4H': 2.8, '1D': 4.5 };
+      var tfSeconds = { '1m': 60, '3m': 180, '5m': 300, '15m': 900, '30m': 1800, '1H': 3600, '4H': 14400, '1D': 86400 };
+  var btSecLeft = 60;
 
   function makeNextCandle(prevClose, cfg, tfMult) {
     var volRange = cfg.step * tfMult;
@@ -448,6 +449,14 @@
     return { o: o, h: h, l: l, c: c, v: v };
   }
 
+    function formatCountdown(sec) {
+    var h = Math.floor(sec / 3600);
+    var m = Math.floor((sec % 3600) / 60);
+    var s = sec % 60;
+    var mm = (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
+    return h > 0 ? (h < 10 ? '0' + h : h) + ':' + mm : mm;
+  }
+
   function initBtSymbol() {
     if (btTimer) { clearInterval(btTimer); btTimer = null; }
     var playBtn = document.getElementById('btPlayBtn');
@@ -456,11 +465,16 @@
     var sym = document.getElementById('btSym') ? document.getElementById('btSym').value : 'XAUUSD';
     var cfg = symConfigs[sym] || symConfigs.XAUUSD;
     var tfMult = tfMultipliers[btActiveTf] || 1.0;
+    btSecLeft = tfSeconds[btActiveTf] || 60;
 
     btBars = new Array();
     var price = cfg.base;
-    for (var i = 0; i < 42; i++) {
+    var nowMs = Date.now();
+    var barMs = btSecLeft * 1000;
+
+    for (var i = 41; i >= 0; i--) {
       var bar = makeNextCandle(price, cfg, tfMult);
+      bar.t = new Date(nowMs - i * barMs).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
       btBars.push(bar);
       price = bar.c;
     }
@@ -471,14 +485,49 @@
     drawBt();
   }
 
-  function setBtTf(tf, btn) {
-    btActiveTf = tf;
-    var btns = document.querySelectorAll('#btTfBar button');
-    for (var i = 0; i < btns.length; i++) btns[i].className = 'btn-o';
-    if (btn) btn.className = 'btn-g';
-    initBtSymbol();
-  }
+  function tickBtCandle() {
+    if (!isPro) { go('sub'); return; }
+    var sym = document.getElementById('btSym') ? document.getElementById('btSym').value : 'XAUUSD';
+    var cfg = symConfigs[sym] || symConfigs.XAUUSD;
+    var tfMult = tfMultipliers[btActiveTf] || 1.0;
+    var curr = btBars[btBars.length - 1];
 
+    var tickMove = (Math.random() - 0.49) * cfg.step * tfMult * 0.28;
+    curr.c = +(curr.c + tickMove).toFixed(cfg.dec);
+    if (curr.c > curr.h) curr.h = curr.c;
+    if (curr.c < curr.l) curr.l = curr.c;
+    curr.v += Math.floor(2 + Math.random() * 14);
+
+    if (btPos) {
+      if (btPos.dir === 'BUY') {
+        if (curr.l <= btPos.sl) closeBtPos('Stop Loss Hit', btPos.sl);
+        else if (curr.h >= btPos.tp) closeBtPos('Take Profit Hit', btPos.tp);
+      } else {
+        if (curr.h >= btPos.sl) closeBtPos('Stop Loss Hit', btPos.sl);
+        else if (curr.l <= btPos.tp) closeBtPos('Take Profit Hit', btPos.tp);
+      }
+    }
+
+    btSecLeft--;
+    if (btSecLeft <= 0) {
+      btSecLeft = tfSeconds[btActiveTf] || 60;
+      var next = makeNextCandle(curr.c, cfg, tfMult);
+      next.c = next.o;
+      next.h = next.o;
+      next.l = next.o;
+      next.t = new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false });
+      btBars.push(next);
+      if (btBars.length > 52) btBars.shift();
+    }
+
+    var badge = document.getElementById('btLivePrice');
+    if (badge) {
+      badge.textContent = curr.c.toFixed(cfg.dec) + '  ⏱ ' + formatCountdown(btSecLeft);
+      badge.className = curr.c >= curr.o ? 'tag-g' : 'tag-r';
+    }
+    updateBtUi();
+    drawBt();
+  }
   function setBtTool(tool, btn) {
     btTool = tool;
     btPendingPt = null;
@@ -1493,7 +1542,7 @@
     if (!isPro) { go('sub'); return; }
     document.getElementById('aiOut').innerHTML = '<div class="mini" style="border-color:var(--green);"><strong>AI Report:</strong> Analyzed ' + trades.length + ' trades. Keep risk under 2% per trade and stick to London/NY overlap!</div>';
   }
-
+<script>
     var btTimer = null;
   var btSpeedMs = 1000;
   var btActiveTf = '15m';
@@ -1561,7 +1610,7 @@
     if (btn) btn.className = 'btn-g';
     initBtSymbol();
   }
-
+</script>
   function setBtTool(tool, btn) {
     btTool = tool;
     btPendingPt = null;
