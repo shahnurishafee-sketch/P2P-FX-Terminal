@@ -938,6 +938,44 @@ renderAll();
     localStorage.removeItem('p2p_fx_session');
     window.location.href = 'auth.html';
   }
+    async function loadLiveFxNews() {
+    var b = document.getElementById('econBody');
+    if (!b) return;
+    b.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">Fetching live market & economic releases...</td></tr>';
+
+    try {
+      var rssUrl = 'https://fxstreet.com';
+      var api = 'https://rss2json.com' + encodeURIComponent(rssUrl);
+      var res = await fetch(api);
+      var data = await res.json();
+
+      if (!data.items || !data.items.length) throw new Error('No items');
+
+      b.innerHTML = data.items.slice(0, 15).map(function(item) {
+        var dt = new Date(item.pubDate.replace(' ', 'T') + 'Z');
+        var istTime = isNaN(dt.getTime()) ? item.pubDate : dt.toLocaleTimeString('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+        var title = item.title || '';
+        var isHigh = /CPI|NFP|FOMC|Fed|ECB|BoE|RBI|GDP|Rate|Inflation|Gold|XAU|USD|Powell/i.test(title);
+        var badge = isHigh ? '<span class="tag-r">HIGH</span>' : '<span class="tag-g">LIVE</span>';
+        return '<tr>' +
+          '<td style="white-space:nowrap;">' + istTime + '</td>' +
+          '<td><strong>FXStreet</strong></td>' +
+          '<td>' + badge + '</td>' +
+          '<td>' + title + '</td>' +
+          '<td><a href="' + item.link + '" target="_blank" class="btn-o" style="padding:3px 8px;font-size:0.72rem;">Read ↗</a></td>' +
+        '</tr>';
+      }).join('');
+    } catch (err) {
+      b.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">Live feed temporarily busy — click <strong>Open Forex Factory ↗</strong> above or <strong>Refresh Feed</strong>.</td></tr>';
+    }
+  }
+
+  loadLiveFxNews();
 </script>
 </body>
 </html>
