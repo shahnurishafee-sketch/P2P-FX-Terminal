@@ -841,12 +841,13 @@
   document.getElementById('tDate').valueAsDate = now;
   document.getElementById('calMonth').value = now.toISOString().slice(0, 7);
 
-  function openJournalApp() {
-    const session = localStorage.getItem('p2p_fx_session');
-    if (!session) {
+    function openJournalApp() {
+    if (localStorage.getItem('p2p_fx_session')) {
+      window.location.href = 'dashboard.html';
+    } else {
       window.location.href = 'auth.html';
-      return;
     }
+  }
     document.getElementById('landingView').style.display = 'none';
     document.getElementById('appView').style.display = 'block';
     window.scrollTo(0, 0);
