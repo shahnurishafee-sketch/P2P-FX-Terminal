@@ -753,22 +753,6 @@
     grid.innerHTML = heads + cells;
     if (typeof renderPerfChart === 'function') renderPerfChart();
   }
-      if (col === 7 || d === totalDays) {
-        while (col < 7) {
-          cells += '<div class="c-cell" style="opacity:0.35;"></div>';
-          col++;
-        }
-        var wkClass = wkSum > 0 ? 'win' : (wkSum < 0 ? 'loss' : '');
-        cells += '<div class="c-wk"><small style="color:var(--muted);">WEEKLY</small><strong class="' + wkClass + '">$' + wkSum.toFixed(0) + '</strong><small style="color:var(--muted);">' + wkDays + 'd</small></div>';
-        col = 0;
-        wkSum = 0;
-        wkDays = 0;
-      }
-    }
-
-    grid.innerHTML = heads + cells;
-    renderPerfChart();
-
   function renderCalEvents() {
     var b = document.getElementById('econBody');
     if (!b) return;
