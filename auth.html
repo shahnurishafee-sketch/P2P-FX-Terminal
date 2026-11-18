@@ -206,18 +206,20 @@
       btn.textContent = "Sending OTP...";
 
       try {
+        const expiryTime = new Date(Date.now() + 15 * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
         await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-          to_email: activeEmail,
-          otp_code: generatedOtp
+          email: activeEmail,
+          otp_code: generatedOtp,
+          time: expiryTime
         });
+
         document.getElementById('displayEmail').textContent = activeEmail;
         showStatus("OTP sent! Check your inbox (and spam folder).", "ok");
         switchStep('stepOtp');
       } catch (err) {
-        showStatus("Failed to send email. Verify your EmailJS Service ID, Template ID, and Public Key.", "err");
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Continue with email";
+        console.error("EmailJS Error:", err);
+        showStatus("Error: " + (err.text || err.message || "Failed to send OTP"), "err");
       }
     });
 
