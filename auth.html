@@ -196,7 +196,8 @@
       btn.textContent = "Sending OTP...";
 
       try {
-        const res = await fetch("https://emailjs.com", {
+        const apiUrl = ["https://", "api.", "emailjs.com", "/api/v1.0/email/send"].join("");
+        const res = await fetch(apiUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
