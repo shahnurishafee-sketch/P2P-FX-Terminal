@@ -418,10 +418,34 @@
         </div>
       </div>
 
-      <div id="st-mt5" class="st-pane card" style="display:none; text-align:center; padding:34px;">
-        <h3 style="margin-top:0;">MT4/MT5 Real-Time Auto-Sync</h3>
-        <p style="color:var(--muted);">Upgrade to Pro or Elite to connect your MetaTrader account via read-only investor password.</p>
-        <button class="btn-g" onclick="go('sub')">Upgrade to Pro</button>
+            <div id="st-mt5" class="st-pane card" style="display:none;">
+        <div class="card-h">
+          <span>MT4 / MT5 Read-Only Auto-Sync</span>
+          <span id="mtSyncBadge" class="tag-r">● Disconnected</span>
+        </div>
+        <p style="color:var(--muted); font-size:0.84rem;">
+          Connect your broker using your <strong>Read-Only Investor Password</strong> (view-only access; trades cannot be placed or modified).
+        </p>
+        <div class="g2" style="gap:10px; margin-bottom:12px;">
+          <div>
+            <small>PLATFORM</small>
+            <select id="mtPlatform"><option value="mt5">MetaTrader 5 (MT5)</option><option value="mt4">MetaTrader 4 (MT4)</option></select>
+          </div>
+          <div>
+            <small>BROKER SERVER NAME</small>
+            <input type="text" id="mtServer" placeholder="e.g. Exness-MT5Real7">
+          </div>
+          <div>
+            <small>ACCOUNT LOGIN NUMBER</small>
+            <input type="text" id="mtLogin" placeholder="e.g. 51209843">
+          </div>
+          <div>
+            <small>INVESTOR PASSWORD (READ-ONLY)</small>
+            <input type="password" id="mtPass" placeholder="Read-only investor password">
+          </div>
+        </div>
+        <button type="button" id="mtSyncBtn" class="btn-g" onclick="connectAndSyncMT()">Connect & Sync Trades</button>
+        <div id="mtStatusMsg" style="margin-top:10px; font-size:0.84rem;"></div>
       </div>
 
       <div id="st-priv" class="st-pane card" style="display:none;">
@@ -976,6 +1000,81 @@ renderAll();
   }
 
   loadLiveFxNews();
+    const MT_WORKER_URL = 'https://workers.dev';
+
+  async function connectAndSyncMT() {
+    if (!isPro) { go('sub'); return; }
+
+    var platform = document.getElementById('mtPlatform').value;
+    var server = document.getElementById('mtServer').value.trim();
+    var login = document.getElementById('mtLogin').value.trim();
+    var investorPassword = document.getElementById('mtPass').value;
+    var msg = document.getElementById('mtStatusMsg');
+    var btn = document.getElementById('mtSyncBtn');
+
+    if (!server || !login || !investorPassword) {
+      msg.innerHTML = '<span class="loss">Please enter Broker Server Name, Account Login Number, and Read-Only Investor Password.</span>';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Connecting to Broker...';
+    msg.innerHTML = '<span style="color:var(--muted);">Connecting to ' + platform.toUpperCase() + ' server (takes ~15–30s on first sync)...</span>';
+
+    try {
+      var res = await fetch(MT_WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ login: login, investorPassword: investorPassword, server: server, platform: platform })
+      });
+      var data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || 'Sync failed');
+
+      var deals = data.deals || new Array();
+      var closingDeals = deals.filter(function(d) {
+        return (d.type === 'DEAL_TYPE_BUY' || d.type === 'DEAL_TYPE_SELL') &&
+               (d.entryType === 'DEAL_ENTRY_OUT' || d.profit !== 0);
+      });
+
+      var existingIds = {};
+      for (var i = 0; i < trades.length; i++) existingIds[String(trades[i].id)] = true;
+      var addedCount = 0;
+
+      for (var j = 0; j < closingDeals.length; j++) {
+        var d = closingDeals[j];
+        var dealId = 'MT-' + d.id;
+        if (!existingIds[dealId]) {
+          var netPnl = Number(((d.profit || 0) + (d.commission || 0) + (d.swap || 0)).toFixed(2));
+          trades.unshift({
+            id: dealId,
+            sym: (d.symbol || 'UNKNOWN').toUpperCase(),
+            side: d.type === 'DEAL_TYPE_BUY' ? 'Long' : 'Short',
+            lot: d.volume || 0.01,
+            ent: d.price || 0,
+            ext: d.price || 0,
+            open: false,
+            pnl: netPnl,
+            dat: (d.time || new Date().toISOString()).slice(0, 10),
+            mkt: 'Forex',
+            emo: 'Disciplined',
+            not: 'Auto-synced from ' + platform.toUpperCase() + ' #' + login
+          });
+          addedCount++;
+        }
+      }
+
+      localStorage.setItem('p2p_fx_terminal_trades', JSON.stringify(trades));
+      document.getElementById('mtSyncBadge').className = 'tag-g';
+      document.getElementById('mtSyncBadge').textContent = '● Connected (#' + login + ')';
+      msg.innerHTML = '<span class="win">Synced successfully! Imported ' + addedCount + ' closed trades from ' + platform.toUpperCase() + '.</span>';
+      renderAll();
+    } catch (err) {
+      msg.innerHTML = '<span class="loss">Error: ' + err.message + '</span>';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Connect & Sync Trades';
+    }
+  }
 </script>
 </body>
 </html>
