@@ -841,24 +841,16 @@
   document.getElementById('tDate').valueAsDate = now;
   document.getElementById('calMonth').value = now.toISOString().slice(0, 7);
 
-    function openJournalApp() {
+      function openJournalApp() {
     if (localStorage.getItem('p2p_fx_session')) {
       window.location.href = 'dashboard.html';
     } else {
       window.location.href = 'auth.html';
     }
   }
-    document.getElementById('landingView').style.display = 'none';
-    document.getElementById('appView').style.display = 'block';
-    window.scrollTo(0, 0);
-    renderAll();
-  }
 
   function closeJournalApp() {
-    document.getElementById('appView').style.display = 'none';
-    document.getElementById('landingView').style.display = 'block';
-    window.history.replaceState({}, '', 'index.html');
-    window.scrollTo(0, 0);
+    window.location.href = 'index.html';
   }
 
   // Auto-open journal when redirected back from auth.html after OTP verification
