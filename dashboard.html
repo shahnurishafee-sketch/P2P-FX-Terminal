@@ -1010,7 +1010,6 @@
   }
 
   initBtSymbol();
-    </script>
     <!-- 8. TRADERS LOUNGE -->
     <section id="v-lounge" class="view">
       <div class="card">
@@ -1612,9 +1611,7 @@
     for (var i = 0; i < btns.length; i++) btns[i].className = 'btn-o';
     if (btn) btn.className = 'btn-g';
     initBtSymbol();
-    </script>
   }
-</script>
   function setBtTool(tool, btn) {
     btTool = tool;
     btPendingPt = null;
@@ -1959,7 +1956,6 @@ ctx.setLineDash(new Array());
     btNet = 0;
     btClosedList = new Array();
     initBtSymbol();
-          </script>
   }
 
   function btOrder(dir) {
@@ -2075,7 +2071,6 @@ ctx.setLineDash(new Array());
   }
 
   initBtSymbol();
-          </script>
   function renderLounge() {
     var f = document.getElementById('loungeFeed');
     if (f) f.innerHTML = ideas.map(function(x) { return '<div class="mini"><strong>' + x.user + '</strong><p style="margin:6px 0 0;color:var(--muted);">' + x.text + '</p></div>'; }).join('');
