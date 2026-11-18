@@ -687,20 +687,21 @@
     var picker = document.getElementById('calPicker');
     var ym = (picker && picker.value) ? picker.value : '2026-11';
     var parts = ym.split('-');
-    var year = parseInt(parts.at(0), 10);
-    var month = parseInt(parts.at(1), 10);
+    var year = parseInt(parts[0], 10);
+    var month = parseInt(parts[1], 10);
 
     var totalDays = new Date(year, month, 0).getDate();
     var startOffset = (new Date(year, month - 1, 1).getDay() + 6) % 7;
 
     var byDay = {};
     var monthTotal = 0;
-    trades.forEach(function(t) {
+    for (var i = 0; i < trades.length; i++) {
+      var t = trades[i];
       if (!t.open && t.dat && t.dat.indexOf(ym) === 0) {
         byDay[t.dat] = (byDay[t.dat] || 0) + t.pnl;
         monthTotal += t.pnl;
       }
-    });
+    }
 
     var mEl = document.getElementById('calMonthPnl');
     if (mEl) {
@@ -708,9 +709,11 @@
       mEl.className = monthTotal >= 0 ? 'win' : 'loss';
     }
 
-    var heads = new Array('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Weekly')
-      .map(function(h) { return '<small style="color:var(--muted);font-weight:700;">' + h + '</small>'; })
-      .join('');
+    var dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Weekly'];
+    var heads = '';
+    for (var h = 0; h < dayNames.length; h++) {
+      heads += '<small style="color:var(--muted);font-weight:700;">' + dayNames[h] + '</small>';
+    }
 
     var cells = '';
     var col = 0;
@@ -734,6 +737,22 @@
       cells += '<div class="c-cell" style="' + style + '"><span style="text-align:left;color:var(--muted);">' + d + '</span>' + pnlHtml + '</div>';
       col++;
 
+      if (col === 7 || d === totalDays) {
+        while (col < 7) {
+          cells += '<div class="c-cell" style="opacity:0.35;"></div>';
+          col++;
+        }
+        var wkClass = wkSum > 0 ? 'win' : (wkSum < 0 ? 'loss' : '');
+        cells += '<div class="c-wk"><small style="color:var(--muted);">WEEKLY</small><strong class="' + wkClass + '">$' + wkSum.toFixed(0) + '</strong><small style="color:var(--muted);">' + wkDays + 'd</small></div>';
+        col = 0;
+        wkSum = 0;
+        wkDays = 0;
+      }
+    }
+
+    grid.innerHTML = heads + cells;
+    if (typeof renderPerfChart === 'function') renderPerfChart();
+  }
       if (col === 7 || d === totalDays) {
         while (col < 7) {
           cells += '<div class="c-cell" style="opacity:0.35;"></div>';
