@@ -751,11 +751,72 @@
     grid.innerHTML = heads + cells;
     if (typeof renderPerfChart === 'function') renderPerfChart();
   }
-  function renderCalEvents() {
+   var ffCache = null;
+
+  async function renderCalEvents() {
     var b = document.getElementById('econBody');
     if (!b) return;
-    b.innerHTML = '<tr><td>13:30</td><td><strong>🇬🇧 GBP</strong></td><td><span class="tag-r">HIGH</span></td><td>CPI (YoY)</td><td>2.6%</td><td>2.5%</td><td>2.3%</td></tr><tr><td>18:00</td><td><strong>🇺🇸 USD</strong></td><td><span class="tag-r">HIGH</span></td><td>Core Retail Sales (MoM)</td><td>—</td><td>0.3%</td><td>0.4%</td></tr>';
+    var filterEl = document.getElementById('calImpact');
+    var impactFilter = filterEl ? filterEl.value : 'ALL';
+
+    if (!ffCache) {
+      b.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;">Loading live Forex Factory calendar...</td></tr>';
+      try {
+        var ffUrl = new Array('https://', 'nfs.faireconomy.media', '/ff_calendar_thisweek.json').join('');
+        var res;
+        try {
+          res = await fetch(ffUrl);
+          if (!res.ok) throw new Error('Direct blocked');
+        } catch (e) {
+          var proxyUrl = new Array('https://', 'api.allorigins.win', '/raw?url=').join('') + encodeURIComponent(ffUrl);
+          res = await fetch(proxyUrl);
+        }
+        ffCache = await res.json();
+      } catch (err) {
+        b.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--red);padding:20px;">Unable to reach Forex Factory feed right now. Refresh to retry.</td></tr>';
+        return;
+      }
+    }
+
+    var flags = { USD: '🇺🇸', EUR: '🇪🇺', GBP: '🇬🇧', JPY: '🇯🇵', AUD: '🇦🇺', CAD: '🇨🇦', NZD: '🇳🇿', CHF: '🇨🇭', CNY: '🇨🇳' };
+    var rows = ffCache.filter(function(ev) {
+      var imp = (ev.impact || '').toUpperCase();
+      if (impactFilter === 'HIGH') return imp === 'HIGH';
+      if (impactFilter === 'MED') return imp === 'MEDIUM';
+      return true;
+    });
+
+    if (!rows.length) {
+      b.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;">No Forex Factory events match this filter.</td></tr>';
+      return;
+    }
+
+    b.innerHTML = rows.map(function(ev) {
+      var dt = new Date(ev.date);
+      var istTime = isNaN(dt.getTime()) ? ev.date : dt.toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        weekday: 'short',
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+      var impRaw = (ev.impact || 'Low').toUpperCase();
+      var badgeClass = impRaw === 'HIGH' ? 'tag-r' : (impRaw === 'MEDIUM' ? 'tag-g' : '');
+      var flag = flags[ev.country] || '🌐';
+      return '<tr>' +
+        '<td>' + istTime + '</td>' +
+        '<td><strong>' + flag + ' ' + (ev.country || '') + '</strong></td>' +
+        '<td><span class="' + badgeClass + '">' + impRaw + '</span></td>' +
+        '<td>' + (ev.title || '') + '</td>' +
+        '<td>' + (ev.actual || '—') + '</td>' +
+        '<td>' + (ev.forecast || '—') + '</td>' +
+        '<td>' + (ev.previous || '—') + '</td>' +
+      '</tr>';
+    }).join('');
   }
+
 
   function runAi() {
     if (!isPro) { go('sub'); return; }
