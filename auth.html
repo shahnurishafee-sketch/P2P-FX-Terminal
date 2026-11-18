@@ -238,7 +238,7 @@
       const existingUsers = JSON.parse(localStorage.getItem('p2p_fx_users')) || {};
       if (existingUsers[activeEmail]) {
         localStorage.setItem('p2p_fx_session', JSON.stringify(existingUsers[activeEmail]));
-        window.location.href = "index.html?journal=1";
+        window.location.href = "dashboard.html";
       } else {
         showStatus("Email verified! Create your trader credentials below.", "ok");
         switchStep('stepCreds');
@@ -256,7 +256,7 @@
       existingUsers[activeEmail] = { email: activeEmail, name, password, createdAt: new Date().toISOString() };
       localStorage.setItem('p2p_fx_users', JSON.stringify(existingUsers));
       localStorage.setItem('p2p_fx_session', JSON.stringify(existingUsers[activeEmail]));
-      window.location.href = "index.html?journal=1";
+      window.location.href = "dashboard.html";
     }
   </script>
 </body>
