@@ -712,3 +712,36 @@ document.getElementById('ePr').textContent = c === 'y' ? '$19.99' : '$24.99';
 function exportCsv() { alert('Exporting trades to CSV...'); }
 drawBt();
 renderAll();
+  <script>
+  function updateClock() {
+    var now = new Date();
+    var d = document.getElementById('todayDate');
+    var c = document.getElementById('clock');
+    if (d) d.innerText = now.toDateString();
+    if (c) c.innerText = now.toLocaleTimeString();
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  function go(id, btn) {
+    var views = document.querySelectorAll('.view');
+    for (var i = 0; i < views.length; i++) views[i].classList.remove('active');
+    var target = document.getElementById('v-' + id);
+    if (target) target.classList.add('active');
+    if (btn) {
+      var btns = document.querySelectorAll('.nav-btn');
+      for (var j = 0; j < btns.length; j++) btns[j].classList.remove('active');
+      btn.classList.add('active');
+    }
+    var titleEl = document.getElementById('viewTitle');
+    if (titleEl) titleEl.innerText = id.toUpperCase();
+  }
+
+  function logout() {
+    localStorage.removeItem('p2p_fx_session');
+    window.location.href = 'auth.html';
+  }
+</script>
+</body>
+</html>
+
