@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sign In — P2P FX Terminal</title>
-    <script src="https://jsdelivr.net"></script>
   <style>
     :root {
       --bg: #040706;
@@ -197,19 +196,32 @@
       btn.textContent = "Sending OTP...";
 
       try {
-        emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
-        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-          email: activeEmail,
-          otp_code: generatedOtp,
-          time: expiryTime
+        const res = await fetch("https://emailjs.com", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            service_id: EMAILJS_SERVICE_ID,
+            template_id: EMAILJS_TEMPLATE_ID,
+            user_id: EMAILJS_PUBLIC_KEY,
+            template_params: {
+              email: activeEmail,
+              otp_code: generatedOtp,
+              time: expiryTime
+            }
+          })
         });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(errText || "EmailJS rejected the request");
+        }
 
         document.getElementById('displayEmail').textContent = activeEmail;
         showStatus("OTP sent! Check your inbox (and spam folder).", "ok");
         switchStep('stepOtp');
       } catch (err) {
         console.error("EmailJS Error:", err);
-        showStatus("Error: " + (err.text || err.message || "Failed to send OTP"), "err");
+        showStatus("Error: " + err.message, "err");
       } finally {
         btn.disabled = false;
         btn.textContent = "Continue with email";
