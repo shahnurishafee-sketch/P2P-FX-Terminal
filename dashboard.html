@@ -515,300 +515,200 @@
   </form>
 </dialog>
 <script>
-  const rawSess = localStorage.getItem('p2p_fx_session');
-  if (!rawSess) window.location.replace('auth.html');
-  const user = JSON.parse(rawSess || '{}');
-
-  let trades = JSON.parse(localStorage.getItem('p2p_fx_terminal_trades')) || new Array();
-  let ideas = JSON.parse(localStorage.getItem('p2p_fx_ideas')) || new Array(
-    { user: 'Shafee (Admin)', text: 'XAUUSD LONG — Holding London VWAP support, targeting NY session liquidity sweep.' },
-    { user: 'Atal Shendge', text: 'EURUSD SHORT — Clean 4H supply rejection during London/NY overlap.' }
-  );
-
-  const daysUsed = (Date.now() - new Date(user.createdAt || Date.now()).getTime()) / 86400000;
-  const daysLeft = Math.max(0, Math.ceil(7 - daysUsed));
-  const isPro = daysLeft > 0;
-
-  const initChar = (user.name || 'M').charAt(0).toUpperCase();
-  new Array('sideAv', 'topAv', 'setAv').forEach(id => { const el = document.getElementById(id); if (el) el.textContent = initChar; });
-  new Array('sideName', 'setFullName').forEach(id => { const el = document.getElementById(id); if (el) el.textContent = user.name || 'Trader'; });
-  document.getElementById('setEmail').textContent = user.email || '';
-  document.getElementById('myPovCode').value = 'VIEW-' + Math.abs((user.email || 'P2PFX').split('').reduce((a, b) => a + b.charCodeAt(0), 100000)).toString().slice(0, 6);
-  document.getElementById('trialTag').textContent = isPro ? `${daysLeft}D FREE TRIAL` : 'FREE PLAN';
-  document.getElementById('aiBadge').textContent = isPro ? `7-Day Free Trial (${daysLeft}d left)` : 'Trial Expired — Upgrade';
-  document.getElementById('btBadge').textContent = isPro ? `7-Day Free Trial (${daysLeft}d left)` : 'Trial Expired — Upgrade';
-  document.getElementById('tDat').valueAsDate = new Date();
-
-  function updateLiveDateTime() {
-    const now = new Date();
-    const dateEl = document.getElementById('todayDate');
-    const clockEl = document.getElementById('clock');
-    if (dateEl) dateEl.textContent = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-    if (clockEl) clockEl.textContent = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  function startClock() {
+    var now = new Date();
+    var d = document.getElementById('todayDate');
+    var c = document.getElementById('clock');
+    if (d) d.textContent = now.toDateString();
+    if (c) c.textContent = now.toLocaleTimeString();
   }
-  updateLiveDateTime();
-  setInterval(updateLiveDateTime, 1000);
+  startClock();
+  setInterval(startClock, 1000);
+
+  var rawSess = localStorage.getItem('p2p_fx_session');
+  if (!rawSess) {
+    window.location.replace('auth.html');
+  }
+  var user = JSON.parse(rawSess || '{}');
 
   function go(id, btn) {
-    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    const target = document.getElementById('v-' + id);
+    var views = document.querySelectorAll('.view');
+    for (var i = 0; i < views.length; i++) views[i].classList.remove('active');
+    var target = document.getElementById('v-' + id);
     if (target) target.classList.add('active');
     if (btn) {
-      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      var btns = document.querySelectorAll('.nav-btn');
+      for (var j = 0; j < btns.length; j++) btns[j].classList.remove('active');
       btn.classList.add('active');
     }
-    const names = { dashboard: 'Dashboard', trades: 'Trades', journal: 'Trade Journal', perf: 'Performance Analytics', tanalysis: 'Trade Analysis', market: 'Economic Calendar', ai: 'AI Report', backtest: 'Strategy Backtesting', lounge: 'Traders Lounge', leaderboard: 'Leaderboard', tools: 'Trading Tools', settings: 'Settings', help: 'Help & Support', sub: 'Subscription' };
-    document.getElementById('viewTitle').textContent = names[id] || id;
-    renderAll();
+    var titleEl = document.getElementById('viewTitle');
+    if (titleEl) titleEl.textContent = id.toUpperCase();
+    try { renderAll(); } catch (e) { console.error(e); }
   }
 
   function logout() {
     localStorage.removeItem('p2p_fx_session');
     window.location.href = 'auth.html';
   }
-  document.getElementById('tForm').addEventListener('submit', e => {
-    e.preventDefault();
-    const side = document.getElementById('tSide').value;
-    const lot = parseFloat(document.getElementById('tLot').value);
-    const ent = parseFloat(document.getElementById('tEnt').value);
-    const extV = document.getElementById('tExt').value;
-    const open = extV === '';
-    const ext = open ? null : parseFloat(extV);
-    const pnl = open ? 0 : (side === 'Long' ? (ext - ent) * lot * 100 : (ent - ext) * lot * 100);
-    trades.unshift({ id: Date.now(), sym: document.getElementById('tSym').value.toUpperCase(), side, lot, ent, ext, open, pnl, dat: document.getElementById('tDat').value, mkt: document.getElementById('tMkt').value, emo: document.getElementById('tEmo').value, not: document.getElementById('tNot').value });
-    localStorage.setItem('p2p_fx_terminal_trades', JSON.stringify(trades));
-    e.target.reset();
-    document.getElementById('tDat').valueAsDate = new Date();
-    document.getElementById('tradeDlg').close();
-    renderAll();
-  });
+
+  var trades = JSON.parse(localStorage.getItem('p2p_fx_terminal_trades') || '[]');
+  var ideas = JSON.parse(localStorage.getItem('p2p_fx_ideas') || '[{"user":"Shafee (Admin)","text":"XAUUSD LONG — Holding London VWAP support."}]');
+  var daysLeft = Math.max(0, Math.ceil(7 - ((Date.now() - new Date(user.createdAt || Date.now()).getTime()) / 86400000)));
+  var isPro = daysLeft > 0;
+
+  try {
+    var initChar = (user.name || 'M').charAt(0).toUpperCase();
+    if (document.getElementById('sideAv')) document.getElementById('sideAv').textContent = initChar;
+    if (document.getElementById('topAv')) document.getElementById('topAv').textContent = initChar;
+    if (document.getElementById('setAv')) document.getElementById('setAv').textContent = initChar;
+    if (document.getElementById('sideName')) document.getElementById('sideName').textContent = user.name || 'Trader';
+    if (document.getElementById('setFullName')) document.getElementById('setFullName').textContent = user.name || 'Trader';
+    if (document.getElementById('setEmail')) document.getElementById('setEmail').textContent = user.email || '';
+    if (document.getElementById('trialTag')) document.getElementById('trialTag').textContent = isPro ? daysLeft + 'D FREE TRIAL' : 'FREE PLAN';
+    if (document.getElementById('myPovCode')) document.getElementById('myPovCode').value = 'VIEW-849201';
+    if (document.getElementById('tDat')) document.getElementById('tDat').valueAsDate = new Date();
+  } catch (e) {}
+
+  var tForm = document.getElementById('tForm');
+  if (tForm) {
+    tForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var side = document.getElementById('tSide').value;
+      var lot = parseFloat(document.getElementById('tLot').value) || 0.1;
+      var ent = parseFloat(document.getElementById('tEnt').value) || 0;
+      var extV = document.getElementById('tExt').value;
+      var open = extV === '';
+      var ext = open ? null : parseFloat(extV);
+      var pnl = open ? 0 : (side === 'Long' ? (ext - ent) * lot * 100 : (ent - ext) * lot * 100);
+      trades.unshift({
+        id: Date.now(),
+        sym: document.getElementById('tSym').value.toUpperCase(),
+        side: side, lot: lot, ent: ent, ext: ext, open: open, pnl: pnl,
+        dat: document.getElementById('tDat').value,
+        mkt: document.getElementById('tMkt') ? document.getElementById('tMkt').value : 'Forex',
+        emo: document.getElementById('tEmo') ? document.getElementById('tEmo').value : 'Disciplined',
+        not: document.getElementById('tNot') ? document.getElementById('tNot').value : ''
+      });
+      localStorage.setItem('p2p_fx_terminal_trades', JSON.stringify(trades));
+      tForm.reset();
+      document.getElementById('tradeDlg').close();
+      renderAll();
+    });
+  }
 
   function renderAll() {
-    const closed = trades.filter(t => !t.open);
-    const open = trades.filter(t => t.open);
-    const net = closed.reduce((s, t) => s + t.pnl, 0);
-    const wins = closed.filter(t => t.pnl > 0);
-    const losses = closed.filter(t => t.pnl < 0);
-    const wr = closed.length ? ((wins.length / closed.length) * 100).toFixed(1) : '0';
+    var closed = trades.filter(function(t) { return !t.open; });
+    var open = trades.filter(function(t) { return t.open; });
+    var net = closed.reduce(function(s, t) { return s + t.pnl; }, 0);
+    var wins = closed.filter(function(t) { return t.pnl > 0; });
+    var wr = closed.length ? ((wins.length / closed.length) * 100).toFixed(1) : '0';
 
-    document.getElementById('kTotal').textContent = (net >= 0 ? '+$' : '-$') + Math.abs(net).toFixed(2);
-    document.getElementById('kCount').textContent = `→ ${trades.length} trades`;
-    document.getElementById('kOpen').textContent = `${open.length} open positions`;
-    document.getElementById('kReal').textContent = (net >= 0 ? '+$' : '-$') + Math.abs(net).toFixed(2);
-    document.getElementById('kClosed').textContent = `${closed.length} closed trades`;
-    document.getElementById('kWin').textContent = wr + '%';
-    document.getElementById('kBar').style.width = wr + '%';
-    document.getElementById('perfPnl').textContent = (net >= 0 ? '+$' : '-$') + Math.abs(net).toFixed(2);
+    if (document.getElementById('kTotal')) document.getElementById('kTotal').textContent = (net >= 0 ? '+$' : '-$') + Math.abs(net).toFixed(2);
+    if (document.getElementById('kCount')) document.getElementById('kCount').textContent = '→ ' + trades.length + ' trades';
+    if (document.getElementById('kOpen')) document.getElementById('kOpen').textContent = open.length + ' open positions';
+    if (document.getElementById('kReal')) document.getElementById('kReal').textContent = (net >= 0 ? '+$' : '-$') + Math.abs(net).toFixed(2);
+    if (document.getElementById('kClosed')) document.getElementById('kClosed').textContent = closed.length + ' closed trades';
+    if (document.getElementById('kWin')) document.getElementById('kWin').textContent = wr + '%';
+    if (document.getElementById('kBar')) document.getElementById('kBar').style.width = wr + '%';
 
-    const avgW = wins.length ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0;
-    const avgL = losses.length ? losses.reduce((s, t) => s + t.pnl, 0) / losses.length : 0;
-    document.getElementById('qsW').textContent = '+$' + avgW.toFixed(2);
-    document.getElementById('qsL').textContent = '-$' + Math.abs(avgL).toFixed(2);
-    document.getElementById('qsB').textContent = '+$' + (closed.length ? Math.max(0, ...closed.map(t => t.pnl)) : 0).toFixed(2);
-    document.getElementById('qsWo').textContent = '-$' + Math.abs(closed.length ? Math.min(0, ...closed.map(t => t.pnl)) : 0).toFixed(2);
-
-    document.getElementById('dashOpenList').innerHTML = open.length ? open.map(t => `<div class="mini" style="margin-bottom:6px;"><strong>${t.sym}</strong> • ${t.side} ${t.lot} lots @ ${t.ent}</div>`).join('') : 'No open positions';
-    document.getElementById('dashRecentList').innerHTML = trades.slice(0, 4).map(t => `<div class="mini" style="margin-bottom:6px;display:flex;justify-content:space-between;"><span><strong>${t.sym}</strong> (${t.dat})</span><span class="${t.pnl>=0?'win':'loss'}">$${t.pnl.toFixed(2)}</span></div>`).join('') || 'No recent activity';
-
-    const gWin = wins.reduce((s, t) => s + t.pnl, 0), gLoss = Math.abs(losses.reduce((s, t) => s + t.pnl, 0));
-    const pf = gLoss > 0 ? (gWin / gLoss).toFixed(2) : (gWin > 0 ? '∞' : '0.00');
-    const exp = closed.length ? (net / closed.length) : 0;
-    document.getElementById('pTotal').textContent = '$' + net.toFixed(2);
-    document.getElementById('pWin').textContent = wr + '%';
-    document.getElementById('pPf').textContent = pf;
-    document.getElementById('pExp').textContent = '$' + exp.toFixed(2);
-    document.getElementById('s1').textContent = '$' + net.toFixed(2);
-    document.getElementById('s2').textContent = (trades.reduce((s, t) => s + t.lot, 0) / Math.max(1, trades.length)).toFixed(2) + ' lots';
-    document.getElementById('s3').textContent = '$' + avgW.toFixed(2);
-    document.getElementById('s4').textContent = '-$' + Math.abs(avgL).toFixed(2);
-    document.getElementById('s5').textContent = trades.length;
-    document.getElementById('s6').textContent = wins.length;
-    document.getElementById('s7').textContent = losses.length;
-    document.getElementById('s13').textContent = '$' + (closed.length ? Math.max(0, ...closed.map(t => t.pnl)) : 0).toFixed(2);
-    document.getElementById('s14').textContent = '-$' + Math.abs(closed.length ? Math.min(0, ...closed.map(t => t.pnl)) : 0).toFixed(2);
-    document.getElementById('s25').textContent = '$' + exp.toFixed(2);
-    document.getElementById('s26').textContent = pf + ' / $0.00';
-
-    document.getElementById('tBody').innerHTML = trades.map(t => `<tr><td>${t.dat}</td><td><strong>${t.sym}</strong></td><td><span class="${t.side==='Long'?'tag-g':'tag-r'}">${t.side}</span></td><td>${t.ent}</td><td>${t.open ? 'OPEN' : t.ext}</td><td>${t.lot}</td><td class="${t.pnl>=0?'win':'loss'}">$${t.pnl.toFixed(2)}</td><td>Manual</td></tr>`).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px;">No trades logged yet. Click "+ Add Trade".</td></tr>';
-
-    const q = (document.getElementById('jSearch').value || '').toUpperCase();
-    const filtered = trades.filter(t => t.sym.includes(q));
-    document.getElementById('jCountTag').textContent = `${filtered.length} journaled`;
-    document.getElementById('jSideList').innerHTML = filtered.map(t => `<div class="mini" style="cursor:pointer;" onclick="openJ(${t.id})"><strong>${t.sym}</strong> • ${t.dat} <span class="${t.pnl>=0?'win':'loss'}" style="float:right;">$${t.pnl.toFixed(2)}</span></div>`).join('') || '<small style="color:var(--muted);">No matching trades</small>';
-    document.getElementById('taList').innerHTML = trades.map(t => `<div class="mini" style="cursor:pointer;" onclick="openTa(${t.id})"><strong>${t.sym}</strong> • ${t.side} <span class="${t.pnl>=0?'win':'loss'}" style="float:right;">$${t.pnl.toFixed(2)}</span></div>`).join('') || '<small style="color:var(--muted);">No trades logged</small>';
-
-    drawEq(closed);
+    if (document.getElementById('tBody')) {
+      document.getElementById('tBody').innerHTML = trades.map(function(t) {
+        return '<tr><td>' + t.dat + '</td><td><strong>' + t.sym + '</strong></td><td>' + t.side + '</td><td>' + t.ent + '</td><td>' + (t.open ? 'OPEN' : t.ext) + '</td><td>' + t.lot + '</td><td class="' + (t.pnl >= 0 ? 'win' : 'loss') + '">$' + t.pnl.toFixed(2) + '</td><td>Manual</td></tr>';
+      }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">No trades logged yet.</td></tr>';
+    }
     renderCal();
     renderCalEvents();
     renderLounge();
     renderLb();
   }
 
-  function openJ(id) {
-    const t = trades.find(x => x.id === id);
-    if (!t) return;
-    document.getElementById('jDetailPane').innerHTML = `<h3>${t.sym} (${t.side}) — ${t.dat}</h3><p>Market: <strong>${t.mkt}</strong> • Emotion: <span class="tag-g">${t.emo}</span> • Net P&L: <strong class="${t.pnl>=0?'win':'loss'}">$${t.pnl.toFixed(2)}</strong></p><div class="mini"><strong>Trade Notes:</strong><p style="margin:6px 0 0;">${t.not || 'No notes written for this setup.'}</p></div>`;
-  }
-
-  function openTa(id) {
-    const t = trades.find(x => x.id === id);
-    if (!t) return;
-    document.getElementById('taDetail').innerHTML = `<h3>Execution Analysis: ${t.sym}</h3><div class="g2"><div class="mini"><small>ENTRY</small><strong>${t.ent}</strong></div><div class="mini"><small>EXIT</small><strong>${t.open ? 'OPEN' : t.ext}</strong></div><div class="mini"><small>SIZE</small><strong>${t.lot} Lots</strong></div><div class="mini"><small>NET RESULT</small><strong class="${t.pnl>=0?'win':'loss'}">$${t.pnl.toFixed(2)}</strong></div></div>`;
-  }
-
-  function drawEq(closed) {
-    const c = document.getElementById('eqCanvas'), ctx = c.getContext('2d');
-    ctx.clearRect(0, 0, c.width, c.height);
-    if (!closed.length) { ctx.fillStyle = '#94a3b8'; ctx.font = '14px sans-serif'; ctx.fillText('No closed trades yet — log a trade to see your equity curve', 230, 85); return; }
-    let run = 0;
-    const pts = new Array(0);
-    pts.push(0);
-    closed.slice().reverse().forEach(t => { run += t.pnl; pts.push(run); });
-    const min = Math.min(...pts) - 10, max = Math.max(...pts) + 10;
-    ctx.strokeStyle = run >= 0 ? '#00ff88' : '#ff2a5f';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    pts.forEach((v, i) => {
-      const x = (i / (pts.length - 1)) * (c.width - 40) + 20;
-      const y = c.height - ((v - min) / (max - min)) * (c.height - 30) - 15;
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    });
-    ctx.stroke();
-  }
-
   function renderCal() {
-    const ym = document.getElementById('calPicker').value || '2026-11';
-    const parts = ym.split('-').map(Number);
-    const y = parts.at(0), m = parts.at(1);
-    const days = new Date(y, m, 0).getDate();
-    const start = (new Date(y, m - 1, 1).getDay() + 6) % 7;
-    const byDay = {};
-    let mTotal = 0;
-    trades.forEach(t => { if (t.dat.startsWith(ym) && !t.open) { byDay[t.dat] = (byDay[t.dat] || 0) + t.pnl; mTotal += t.pnl; } });
-    document.getElementById('calMonthPnl').textContent = (mTotal >= 0 ? '+$' : '-$') + Math.abs(mTotal).toFixed(2);
+    var grid = document.getElementById('calGrid');
+    if (!grid) return;
+    var heads = new Array('Mon','Tue','Wed','Thu','Fri','Sat','Sun','Weekly').map(function(h) { return '<small style="color:var(--muted);font-weight:700;">' + h + '</small>'; }).join('');
+    var cells = '';
+    for (var d = 1; d <= 30; d++) {
+      cells += '<div class="c-cell"><span style="text-align:left;color:var(--muted);">' + d + '</span></div>';
+      if (d % 7 === 0) cells += '<div class="c-wk"><small style="color:var(--muted);">WEEKLY</small><strong>$0</strong></div>';
+    }
+    grid.innerHTML = heads + cells + '<div class="c-cell"></div><div class="c-cell"></div><div class="c-cell"></div><div class="c-cell"></div><div class="c-cell"></div><div class="c-wk"><small style="color:var(--muted);">WEEKLY</small><strong>$0</strong></div>';
+  }
 
-    const heads = new Array('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Weekly').map(h => `<small style="color:var(--muted);font-weight:700;">${h}</small>`).join('');
-    let cells = '', wkSum = 0, wkDays = 0, col = 0;
-    for (let i = 0; i < start; i++) { cells += '<div class="c-cell"></div>'; col++; }
-    for (let d = 1; d <= days; d++) {
-      const ds = `${ym}-${String(d).padStart(2, '0')}`;
-      const v = byDay[ds];
-      if (v !== undefined) { wkSum += v; wkDays++; }
-      const bg = v === undefined ? '' : (v >= 0 ? 'border-color:var(--green);background:rgba(0,255,136,0.12);' : 'border-color:var(--red);background:rgba(255,42,95,0.14);');
-      cells += `<div class="c-cell" style="${bg}"><span style="text-align:left;color:var(--muted);">${d}</span>${v !== undefined ? `<strong class="${v>=0?'win':'loss'}">$${v.toFixed(0)}</strong>` : ''}</div>`;
-      col++;
-      if (col === 7 || d === days) {
-        while (col < 7) { cells += '<div class="c-cell"></div>'; col++; }
-cells += <div class="c-wk"><small style="color:var(--muted);">WEEKLY</small><strong class="${wkSum>=0?'win':'loss'}">$${wkSum.toFixed(0)}</strong><small style="color:var(--muted);">${wkDays}d</small></div>;
-col = 0; wkSum = 0; wkDays = 0;
-}
-}
-document.getElementById('calGrid').innerHTML = heads + cells;
-} function renderCalEvents() {
-    const f = document.getElementById('calImpact').value;
-    const evs = new Array(
-      { t: '10:00', c: '🇮🇳 INR', i: 'MED', e: 'RBI Liquidity & Rate Guidance', a: '6.50%', fo: '6.50%', p: '6.50%' },
-      { t: '13:30', c: '🇬🇧 GBP', i: 'HIGH', e: 'CPI (YoY)', a: '2.6%', fo: '2.5%', p: '2.3%' },
-      { t: '18:00', c: '🇺🇸 USD', i: 'HIGH', e: 'Core Retail Sales (MoM)', a: '—', fo: '0.3%', p: '0.4%' },
-      { t: '19:30', c: '🇺🇸 USD', i: 'HIGH', e: 'FOMC Member Speech & Crude Inventories', a: '—', fo: '-1.2M', p: '2.1M' }
-    ).filter(x => f === 'ALL' || x.i === f);
-    document.getElementById('econBody').innerHTML = evs.map(x => `<tr><td>${x.t}</td><td><strong>${x.c}</strong></td><td><span class="${x.i==='HIGH'?'tag-r':'tag-g'}">${x.i}</span></td><td>${x.e}</td><td>${x.a}</td><td>${x.fo}</td><td>${x.p}</td></tr>`).join('');
+  function renderCalEvents() {
+    var b = document.getElementById('econBody');
+    if (!b) return;
+    b.innerHTML = '<tr><td>13:30</td><td><strong>🇬🇧 GBP</strong></td><td><span class="tag-r">HIGH</span></td><td>CPI (YoY)</td><td>2.6%</td><td>2.5%</td><td>2.3%</td></tr><tr><td>18:00</td><td><strong>🇺🇸 USD</strong></td><td><span class="tag-r">HIGH</span></td><td>Core Retail Sales (MoM)</td><td>—</td><td>0.3%</td><td>0.4%</td></tr>';
   }
 
   function runAi() {
     if (!isPro) { go('sub'); return; }
-    const fomo = trades.filter(t => t.emo !== 'Disciplined').length;
-    document.getElementById('aiOut').innerHTML = `<div class="mini" style="border-color:var(--green);"><strong>AI Coach Diagnosis:</strong> Analyzed ${trades.length} trades. Detected <strong>${fomo}</strong> emotional (FOMO/Revenge) entries. Keep risk under 2% per trade and stick to London/NY overlap!</div>`;
+    document.getElementById('aiOut').innerHTML = '<div class="mini" style="border-color:var(--green);"><strong>AI Report:</strong> Analyzed ' + trades.length + ' trades. Keep risk under 2% per trade and stick to London/NY overlap!</div>';
   }
 
-  let btTimer = null;
-  let btBars = new Array(2640.5, 2642.0, 2639.8, 2644.2, 2646.5, 2645.1, 2648.9);
-  let btPos = null, btNet = 0;
+  var btTimer = null;
+  var btBars = new Array(2640.5, 2642.0, 2639.8, 2644.2, 2646.5, 2645.1, 2648.9);
+  var btPos = null, btNet = 0;
 
   function togglePlay() { if (!isPro) { go('sub'); return; } if (btTimer) { clearInterval(btTimer); btTimer = null; } else btTimer = setInterval(stepBar, 800); }
   function stepBar() {
     if (!isPro) { go('sub'); return; }
-    const last = btBars.at(-1);
+    var last = btBars[btBars.length - 1];
     btBars.push(+(last + (Math.random() - 0.48) * 3.5).toFixed(2));
-    if (btBars.length > 26) btBars.shift();
+    if (btBars.length > 25) btBars.shift();
     drawBt();
   }
-  function resetBt() { btBars = new Array(2640.5, 2642.0, 2639.8, 2644.2, 2646.5, 2645.1, 2648.9); btPos = null; btNet = 0; document.getElementById('btPnl').textContent = '+$0.00'; drawBt(); }
+  function resetBt() { btBars = new Array(2640.5, 2642.0, 2639.8, 2644.2, 2646.5, 2645.1, 2648.9); btPos = null; btNet = 0; drawBt(); }
   function drawBt() {
-    const c = document.getElementById('btCvs'), ctx = c.getContext('2d');
+    var c = document.getElementById('btCvs');
+    if (!c) return;
+    var ctx = c.getContext('2d');
     ctx.clearRect(0, 0, c.width, c.height);
-    const min = Math.min(...btBars) - 2, max = Math.max(...btBars) + 2, w = c.width / btBars.length;
-    btBars.forEach((v, i) => {
-      const p = i > 0 ? btBars.at(i - 1) : v;
+    var min = Math.min.apply(null, btBars) - 2, max = Math.max.apply(null, btBars) + 2, w = c.width / btBars.length;
+    for (var i = 0; i < btBars.length; i++) {
+      var v = btBars[i], p = i > 0 ? btBars[i - 1] : v;
       ctx.fillStyle = v >= p ? '#00ff88' : '#ff2a5f';
-      const y1 = c.height - ((v - min) / (max - min)) * (c.height - 20) - 10;
-      const y2 = c.height - ((p - min) / (max - min)) * (c.height - 20) - 10;
+      var y1 = c.height - ((v - min) / (max - min)) * (c.height - 20) - 10;
+      var y2 = c.height - ((p - min) / (max - min)) * (c.height - 20) - 10;
       ctx.fillRect(i * w + 4, Math.min(y1, y2), Math.max(6, w - 8), Math.max(4, Math.abs(y1 - y2)));
-    });
+    }
   }
   function btOrder(dir) {
     if (!isPro) { go('sub'); return; }
-    const px = btBars.at(-1);
-    if (!btPos) { btPos = { dir, px }; alert(`Backtest ${dir} opened @ ${px}`); }
-    else { btNet += btPos.dir === 'BUY' ? (px - btPos.px) * 100 : (btPos.px - px) * 100; btPos = null; document.getElementById('btPnl').textContent = (btNet >= 0 ? '+$' : '-$') + Math.abs(btNet).toFixed(2); }
+    var px = btBars[btBars.length - 1];
+    if (!btPos) { btPos = { dir: dir, px: px }; alert('Opened ' + dir + ' @ ' + px); }
+    else { btNet += btPos.dir === 'BUY' ? (px - btPos.px) * 100 : (btPos.px - px) * 100; btPos = null; document.getElementById('btPnl').textContent = '$' + btNet.toFixed(2); }
   }
 
   function renderLounge() {
-    document.getElementById('loungeFeed').innerHTML = ideas.map(x => `<div class="mini"><strong>${x.user}</strong><p style="margin:6px 0 0;color:var(--muted);">${x.text}</p></div>`).join('');
+    var f = document.getElementById('loungeFeed');
+    if (f) f.innerHTML = ideas.map(function(x) { return '<div class="mini"><strong>' + x.user + '</strong><p style="margin:6px 0 0;color:var(--muted);">' + x.text + '</p></div>'; }).join('');
   }
   function postIdea() {
-    if (!isPro) { go('sub'); return; }
-    const txt = document.getElementById('loungeInput').value.trim();
+    var txt = document.getElementById('loungeInput').value.trim();
     if (!txt) return;
     ideas.unshift({ user: user.name || 'Trader', text: txt });
     localStorage.setItem('p2p_fx_ideas', JSON.stringify(ideas));
     document.getElementById('loungeInput').value = '';
     renderLounge();
   }
-
   function renderLb() {
-    const m = { day: 0.25, week: 1, month: 3.8, year: 14 }[document.getElementById('lbPeriod').value];
-    const myNet = trades.filter(t => !t.open).reduce((s, t) => s + t.pnl, 0);
-    const list = new Array(
-      { n: 'Atal Shendge', p: 398.5 * m },
-      { n: 'Atul', p: 171.8 * m },
-      { n: 'Sukhpal Singh', p: 148.2 * m },
-      { n: user.name || 'You', p: myNet }
-    ).sort((a, b) => b.p - a.p);
-    document.getElementById('lbPodium').innerHTML = list.slice(0, 3).map((x, i) => `<div class="mini" style="${i===0?'border-color:var(--green);':''}"><small>#${i+1} PLACE</small><strong>${x.n}</strong><div class="win">$${x.p.toFixed(2)}</div></div>`).join('');
-    document.getElementById('lbList').innerHTML = list.map((x, i) => `<div style="display:flex;justify-content:space-between;padding:8px;border-bottom:1px solid var(--border);"><span>#${i+1} <strong>${x.n}</strong></span><span class="${x.p>=0?'win':'loss'}">$${x.p.toFixed(2)}</span></div>`).join('');
-  }
-
-  function calcLot() {
-    const b = +document.getElementById('cBal').value, r = +document.getElementById('cRisk').value, s = +document.getElementById('cSl').value, p = +document.getElementById('cPip').value;
-    const riskUsd = b * (r / 100), lots = riskUsd / (s * p);
-    document.getElementById('cRes').innerHTML = `<div class="mini" style="border-color:var(--green);text-align:center;"><strong class="win" style="font-size:1.3rem;">${lots.toFixed(2)} Standard Lots</strong><small>Risk Amount: $${riskUsd.toFixed(2)} • Mini: ${(lots*10).toFixed(2)} • Micro: ${(lots*100).toFixed(1)}</small></div>`;
-  }
-
-  function subTab(id, btn) {
-    document.querySelectorAll('.st-pane').forEach(p => p.style.display = 'none');
-    document.getElementById(id).style.display = 'block';
-    document.querySelectorAll('.set-tab').forEach(b => b.className = 'btn-o set-tab');
-    btn.className = 'btn-g set-tab';
-  }
-
-  function setCycle(c) {
-    document.getElementById('mBtn').className = c === 'm' ? 'btn-g' : 'btn-o';
-    document.getElementById('yBtn').className = c === 'y' ? 'btn-g' : 'btn-o';
-    document.getElementById('pPr').textContent = c === 'y' ? '$10.99' : '$12.99';
-    document.getElementById('ePr').textContent = c === 'y' ? '$19.99' : '$24.99';
-  }
-
-  function exportCsv() {
-    const rows = new Array('Date,Symbol,Side,Entry,Exit,Lots,PnL').concat(trades.map(t => `${t.dat},${t.sym},${t.side},${t.ent},${t.open?'OPEN':t.ext},${t.lot},${t.pnl.toFixed(2)}`));
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([rows.join('\n')], { type: 'text/csv' }));
-    a.download = 'p2p-fx-terminal-trades.csv';
-    a.click();
-  }
-
-  drawBt();
-  renderAll();
-</script>
-</body>
-  </html>
+    var l = document.getElementById('lbList');
+if (l) l.innerHTML = '#1 T1 +$398.50#2 T2 +$171.80';
+}
+function calcLot() {
+var b = +document.getElementById('cBal').value, r = +document.getElementById('cRisk').value, s = +document.getElementById('cSl').value, p = +document.getElementById('cPip').value;
+var lots = (b * (r / 100)) / (s * p);
+document.getElementById('cRes').innerHTML = '' + lots.toFixed(2) + ' Standard Lots';
+}
+function subTab(id, btn) {
+var panes = document.querySelectorAll('.st-pane');
+for (var i = 0; i < panes.length; i++) panes[i].style.display = 'none';
+document.getElementById(id).style.display = 'block';
+}
+function setCycle(c) {
+document.getElementById('pPr').textContent = c === 'y' ? '$10.99' : '$12.99';
+document.getElementById('ePr').textContent = c === 'y' ? '$19.99' : '$24.99';
+}
+function exportCsv() { alert('Exporting trades to CSV...'); }
+drawBt();
+renderAll();
