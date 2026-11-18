@@ -1084,7 +1084,11 @@
 </div><!-- END .app-layout -->
 <script>
   // Session & 7-Day Free Trial Check
-  const userSession = JSON.parse(localStorage.getItem('p2p_fx_session')) || { name: 'Trader', email: 'trader@p2pfx.com', createdAt: new Date().toISOString() };
+  const rawSession = localStorage.getItem('p2p_fx_session');
+  if (!rawSession) {
+    window.location.replace('auth.html');
+  }
+  const userSession = JSON.parse(rawSession || '{}');
   let trades = JSON.parse(localStorage.getItem('p2p_fx_terminal_trades')) || [];
   let loungePosts = JSON.parse(localStorage.getItem('p2p_fx_lounge')) || [
     { author: 'Shafee (Admin)', tag: 'XAUUSD • LONG', text: 'Gold holding above London session VWAP. Watching 15m liquidity sweep for continuation.', time: '2h ago' },
