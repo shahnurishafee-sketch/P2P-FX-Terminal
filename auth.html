@@ -8,14 +8,12 @@
   <style>
     :root {
       --bg: #040706;
-      --card: #09110e;
       --border: #172b23;
       --text: #f8fafc;
       --muted: #94a3b8;
       --green: #00ff88;
       --green-glow: rgba(0, 255, 136, 0.35);
       --red: #ff2a5f;
-      --red-glow: rgba(255, 42, 95, 0.3);
     }
     * { box-sizing: border-box; }
     body {
@@ -24,8 +22,6 @@
       display: grid; grid-template-columns: 1fr 1.1fr;
     }
     @media (max-width: 920px) { body { grid-template-columns: 1fr; } .right-panel { display: none !important; } }
-
-    /* Left Auth Panel */
     .left-panel {
       padding: 36px 48px; display: flex; flex-direction: column; justify-content: space-between;
       background: radial-gradient(circle at 15% 15%, rgba(0, 255, 136, 0.08), transparent 45%);
@@ -50,9 +46,8 @@
       width: 100%; padding: 13px; border-radius: 10px; border: none; cursor: pointer;
       background: linear-gradient(135deg, #00ff88 0%, #00c46a 100%);
       color: #03150c; font-weight: 800; font-size: 0.95rem;
-      box-shadow: 0 0 22px var(--green-glow); transition: transform 0.15s;
+      box-shadow: 0 0 22px var(--green-glow);
     }
-    .btn-neon:hover { transform: translateY(-1px); }
     .btn-neon:disabled { opacity: 0.6; cursor: not-allowed; }
     .terms { font-size: 0.78rem; color: var(--muted); text-align: center; margin-top: 18px; }
     .terms a { color: #fff; text-decoration: underline; }
@@ -62,8 +57,6 @@
     .step { display: none; }
     .step.active { display: block; }
     .link-btn { background: none; border: none; color: var(--green); font-size: 0.84rem; cursor: pointer; padding: 0; margin-top: 10px; }
-
-    /* Right Showcase Panel (Matching Screenshot) */
     .right-panel {
       margin: 20px; border-radius: 22px; padding: 42px;
       background: radial-gradient(circle at 75% 20%, rgba(255, 42, 95, 0.16), transparent 50%),
@@ -86,48 +79,38 @@
   </style>
 </head>
 <body>
-  <!-- Left Panel: Email Only + OTP + Credential Setup -->
   <div class="left-panel">
     <a href="index.html" class="logo"><span class="logo-icon">P2PFB</span> P2P <span style="color:var(--green);">FX</span> <span style="color:var(--red);">Terminal</span></a>
 
     <div class="auth-box">
       <div id="statusBox" class="status-msg"></div>
 
-      <!-- STEP 1: Enter Email Address -->
       <div id="stepEmail" class="step active">
         <h1>Sign in or create an account</h1>
         <p class="sub">Enter your email address to receive a 6-digit verification OTP.</p>
-        <form id="emailForm">
-          <label for="userEmail">Email address</label>
-          <input type="email" id="userEmail" placeholder="you@example.com" required>
-          <button type="submit" id="sendOtpBtn" class="btn-neon">Continue with email</button>
-        </form>
+        <label for="userEmail">Email address</label>
+        <input type="email" id="userEmail" placeholder="you@example.com" required>
+        <button type="button" id="sendOtpBtn" class="btn-neon" onclick="sendOtpNow()">Continue with email</button>
         <p class="terms">By continuing, you agree to our <a href="index.html#faq">Terms</a> and <a href="index.html#faq">Privacy Policy</a></p>
       </div>
 
-      <!-- STEP 2: Verify 6-Digit Email OTP -->
       <div id="stepOtp" class="step">
         <h1>Verify your email</h1>
         <p class="sub">We sent a 6-digit OTP to <strong id="displayEmail" style="color:#fff;"></strong></p>
-        <form id="otpForm">
-          <label for="otpInput">Enter 6-Digit OTP</label>
-          <input type="text" id="otpInput" class="otp-input" maxlength="6" placeholder="000000" required>
-          <button type="submit" class="btn-neon">Verify OTP →</button>
-        </form>
-        <button class="link-btn" onclick="resetToEmail()">← Use a different email address</button>
+        <label for="otpInput">Enter 6-Digit OTP</label>
+        <input type="text" id="otpInput" class="otp-input" maxlength="6" placeholder="000000" required>
+        <button type="button" class="btn-neon" onclick="verifyOtpNow()">Verify OTP →</button>
+        <button type="button" class="link-btn" onclick="resetToEmail()">← Use a different email address</button>
       </div>
 
-      <!-- STEP 3: Create Trader Credentials -->
       <div id="stepCreds" class="step">
         <h1>Create your credentials</h1>
         <p class="sub">Set up your P2P FX Terminal trader profile to enter your journal.</p>
-        <form id="credsForm">
-          <label for="traderName">Trader Name / Community Handle</label>
-          <input type="text" id="traderName" placeholder="e.g. Alex Trader" required>
-          <label for="traderPass">Create Password</label>
-          <input type="password" id="traderPass" minlength="6" placeholder="Minimum 6 characters" required>
-          <button type="submit" class="btn-neon">Complete Setup & Open Journal →</button>
-        </form>
+        <label for="traderName">Trader Name / Community Handle</label>
+        <input type="text" id="traderName" placeholder="e.g. Shafee Trader" required>
+        <label for="traderPass">Create Password</label>
+        <input type="password" id="traderPass" minlength="6" placeholder="Minimum 6 characters" required>
+        <button type="button" class="btn-neon" onclick="saveCredsNow()">Complete Setup & Open Journal →</button>
       </div>
     </div>
 
@@ -136,7 +119,6 @@
     </div>
   </div>
 
-  <!-- Right Panel: Visual Terminal Preview -->
   <div class="right-panel">
     <div class="preview-stack">
       <div class="mock-card-back">
@@ -169,12 +151,10 @@
     <p>A professional trading journal built for P2P FX Terminal members to spot patterns, fix leaks, and grow consistently.</p>
   </div>
   <script>
-    // 1. PASTE YOUR FREE EMAILJS KEYS HERE
+    // PASTE YOUR PUBLIC KEY FROM EMAILJS > ACCOUNT BELOW:
     const EMAILJS_PUBLIC_KEY = "ovm_wHPnH-QlyxZfN";
-    const EMAILJS_SERVICE_ID = "jhrexhn";
-    const EMAILJS_TEMPLATE_ID = "nvk725d";
-
-    emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+    const EMAILJS_SERVICE_ID = "service_jhrexhn";
+    const EMAILJS_TEMPLATE_ID = "template_nvk725d";
 
     let generatedOtp = "";
     let activeEmail = "";
@@ -195,19 +175,29 @@
       switchStep('stepEmail');
     }
 
-    // Step 1: Generate & Send 6-Digit OTP to User's Email
-    document.getElementById('emailForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
+    async function sendOtpNow() {
+      const emailField = document.getElementById('userEmail');
+      activeEmail = emailField.value.trim().toLowerCase();
+
+      if (!activeEmail || !activeEmail.includes('@')) {
+        showStatus("Please enter a valid email address.", "err");
+        return;
+      }
+
+      if (EMAILJS_PUBLIC_KEY === "YOUR_PUBLIC_KEY") {
+        showStatus("Paste your EmailJS Public Key into auth.html first!", "err");
+        return;
+      }
+
       const btn = document.getElementById('sendOtpBtn');
-      activeEmail = document.getElementById('userEmail').value.trim().toLowerCase();
       generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiryTime = new Date(Date.now() + 15 * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
       btn.disabled = true;
       btn.textContent = "Sending OTP...";
 
       try {
-        const expiryTime = new Date(Date.now() + 15 * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
+        emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
         await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
           email: activeEmail,
           otp_code: generatedOtp,
@@ -220,12 +210,13 @@
       } catch (err) {
         console.error("EmailJS Error:", err);
         showStatus("Error: " + (err.text || err.message || "Failed to send OTP"), "err");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Continue with email";
       }
-    });
+    }
 
-    // Step 2: Verify OTP
-    document.getElementById('otpForm').addEventListener('submit', (e) => {
-      e.preventDefault();
+    function verifyOtpNow() {
       const entered = document.getElementById('otpInput').value.trim();
       if (entered !== generatedOtp) {
         showStatus("Invalid OTP. Please check your email and try again.", "err");
@@ -239,21 +230,21 @@
         showStatus("Email verified! Create your trader credentials below.", "ok");
         switchStep('stepCreds');
       }
-    });
+    }
 
-    // Step 3: Save Trader Credentials & Redirect to Journal
-    document.getElementById('credsForm').addEventListener('submit', (e) => {
-      e.preventDefault();
+    function saveCredsNow() {
       const name = document.getElementById('traderName').value.trim();
       const password = document.getElementById('traderPass').value;
+      if (!name || password.length < 6) {
+        showStatus("Enter your name and a password with at least 6 characters.", "err");
+        return;
+      }
       const existingUsers = JSON.parse(localStorage.getItem('p2p_fx_users')) || {};
-
       existingUsers[activeEmail] = { email: activeEmail, name, password, createdAt: new Date().toISOString() };
       localStorage.setItem('p2p_fx_users', JSON.stringify(existingUsers));
       localStorage.setItem('p2p_fx_session', JSON.stringify(existingUsers[activeEmail]));
-
       window.location.href = "index.html?journal=1";
-    });
+    }
   </script>
 </body>
 </html>
