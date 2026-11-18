@@ -126,13 +126,14 @@
       <div class="card">
         <div class="card-h">
           <div><span>Performance</span> <strong id="perfPnl" class="win" style="margin-left:8px;">+$0.00</strong></div>
-          <div style="display:flex; gap:4px;">
-            <button class="btn-o" style="padding:4px 9px; font-size:0.74rem;">1D</button>
-            <button class="btn-o" style="padding:4px 9px; font-size:0.74rem;">1W</button>
-            <button class="btn-o" style="padding:4px 9px; font-size:0.74rem;">1M</button>
-            <button class="btn-o" style="padding:4px 9px; font-size:0.74rem;">3M</button>
-            <button class="btn-g" style="padding:4px 9px; font-size:0.74rem;">ALL</button>
+                    <div id="perfTabs" style="display:flex; gap:4px;">
+            <button class="btn-o" style="padding:4px 9px; font-size:0.74rem;" onclick="setPerfRange('1D', this)">1D</button>
+            <button class="btn-o" style="padding:4px 9px; font-size:0.74rem;" onclick="setPerfRange('1W', this)">1W</button>
+            <button class="btn-o" style="padding:4px 9px; font-size:0.74rem;" onclick="setPerfRange('1M', this)">1M</button>
+            <button class="btn-o" style="padding:4px 9px; font-size:0.74rem;" onclick="setPerfRange('3M', this)">3M</button>
+            <button class="btn-g" style="padding:4px 9px; font-size:0.74rem;" onclick="setPerfRange('ALL', this)">ALL</button>
           </div>
+
         </div>
         <canvas id="eqCanvas" width="800" height="160" style="width:100%; background:var(--bg); border:1px solid var(--border); border-radius:8px;"></canvas>
       </div>
@@ -623,15 +624,131 @@
   }
 
   function renderCal() {
+    var activePerfRange = 'ALL';
+
+  function setPerfRange(range, btn) {
+    activePerfRange = range;
+    var tabs = document.querySelectorAll('#perfTabs button');
+    for (var i = 0; i < tabs.length; i++) tabs[i].className = 'btn-o';
+    if (btn) btn.className = 'btn-g';
+    renderPerfChart();
+  }
+
+  function renderPerfChart() {
+    var closed = trades.filter(function(t) { return !t.open; });
+    var now = Date.now();
+    var cutoffs = { '1D': 1, '1W': 7, '1M': 30, '3M': 90, 'ALL': 99999 };
+    var maxDays = cutoffs[activePerfRange] || 99999;
+
+    var filtered = closed.filter(function(t) {
+      if (activePerfRange === 'ALL') return true;
+      var diffDays = (now - new Date(t.dat).getTime()) / 86400000;
+      return diffDays <= maxDays;
+    });
+
+    var net = filtered.reduce(function(s, t) { return s + t.pnl; }, 0);
+    var perfEl = document.getElementById('perfPnl');
+    if (perfEl) {
+      perfEl.textContent = (net >= 0 ? '+$' : '-$') + Math.abs(net).toFixed(2);
+      perfEl.className = net >= 0 ? 'win' : 'loss';
+    }
+
+    var c = document.getElementById('eqCanvas');
+    if (!c) return;
+    var ctx = c.getContext('2d');
+    ctx.clearRect(0, 0, c.width, c.height);
+
+    if (!filtered.length) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '14px sans-serif';
+      ctx.fillText('No closed trades in ' + activePerfRange + ' period', 280, 85);
+      return;
+    }
+
+    var run = 0;
+    var pts = new Array(0);
+    filtered.slice().reverse().forEach(function(t) { run += t.pnl; pts.push(run); });
+    var min = Math.min.apply(null, pts) - 10;
+    var max = Math.max.apply(null, pts) + 10;
+    ctx.strokeStyle = run >= 0 ? '#00ff88' : '#ff2a5f';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (var i = 0; i < pts.length; i++) {
+      var x = pts.length === 1 ? c.width / 2 : (i / (pts.length - 1)) * (c.width - 40) + 20;
+      var y = c.height - ((pts[i] - min) / (max - min)) * (c.height - 30) - 15;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  function renderCal() {
     var grid = document.getElementById('calGrid');
     if (!grid) return;
-    var heads = new Array('Mon','Tue','Wed','Thu','Fri','Sat','Sun','Weekly').map(function(h) { return '<small style="color:var(--muted);font-weight:700;">' + h + '</small>'; }).join('');
-    var cells = '';
-    for (var d = 1; d <= 30; d++) {
-      cells += '<div class="c-cell"><span style="text-align:left;color:var(--muted);">' + d + '</span></div>';
-      if (d % 7 === 0) cells += '<div class="c-wk"><small style="color:var(--muted);">WEEKLY</small><strong>$0</strong></div>';
+    var picker = document.getElementById('calPicker');
+    var ym = (picker && picker.value) ? picker.value : '2026-11';
+    var parts = ym.split('-');
+    var year = parseInt(parts.at(0), 10);
+    var month = parseInt(parts.at(1), 10);
+
+    var totalDays = new Date(year, month, 0).getDate();
+    var startOffset = (new Date(year, month - 1, 1).getDay() + 6) % 7;
+
+    var byDay = {};
+    var monthTotal = 0;
+    trades.forEach(function(t) {
+      if (!t.open && t.dat && t.dat.indexOf(ym) === 0) {
+        byDay[t.dat] = (byDay[t.dat] || 0) + t.pnl;
+        monthTotal += t.pnl;
+      }
+    });
+
+    var mEl = document.getElementById('calMonthPnl');
+    if (mEl) {
+      mEl.textContent = (monthTotal >= 0 ? '+$' : '-$') + Math.abs(monthTotal).toFixed(2);
+      mEl.className = monthTotal >= 0 ? 'win' : 'loss';
     }
-    grid.innerHTML = heads + cells + '<div class="c-cell"></div><div class="c-cell"></div><div class="c-cell"></div><div class="c-cell"></div><div class="c-cell"></div><div class="c-wk"><small style="color:var(--muted);">WEEKLY</small><strong>$0</strong></div>';
+
+    var heads = new Array('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Weekly')
+      .map(function(h) { return '<small style="color:var(--muted);font-weight:700;">' + h + '</small>'; })
+      .join('');
+
+    var cells = '';
+    var col = 0;
+    var wkSum = 0;
+    var wkDays = 0;
+
+    for (var b = 0; b < startOffset; b++) {
+      cells += '<div class="c-cell" style="opacity:0.35;"></div>';
+      col++;
+    }
+
+    for (var d = 1; d <= totalDays; d++) {
+      var ds = ym + '-' + (d < 10 ? '0' + d : d);
+      var val = byDay[ds];
+      if (val !== undefined) {
+        wkSum += val;
+        wkDays++;
+      }
+      var style = val === undefined ? '' : (val >= 0 ? 'border-color:var(--green);background:rgba(0,255,136,0.12);' : 'border-color:var(--red);background:rgba(255,42,95,0.14);');
+      var pnlHtml = val === undefined ? '' : '<strong class="' + (val >= 0 ? 'win' : 'loss') + '">' + (val >= 0 ? '+$' : '-$') + Math.abs(val).toFixed(0) + '</strong>';
+      cells += '<div class="c-cell" style="' + style + '"><span style="text-align:left;color:var(--muted);">' + d + '</span>' + pnlHtml + '</div>';
+      col++;
+
+      if (col === 7 || d === totalDays) {
+        while (col < 7) {
+          cells += '<div class="c-cell" style="opacity:0.35;"></div>';
+          col++;
+        }
+        var wkClass = wkSum > 0 ? 'win' : (wkSum < 0 ? 'loss' : '');
+        cells += '<div class="c-wk"><small style="color:var(--muted);">WEEKLY</small><strong class="' + wkClass + '">$' + wkSum.toFixed(0) + '</strong><small style="color:var(--muted);">' + wkDays + 'd</small></div>';
+        col = 0;
+        wkSum = 0;
+        wkDays = 0;
+      }
+    }
+
+    grid.innerHTML = heads + cells;
+    renderPerfChart();
   }
 
   function renderCalEvents() {
