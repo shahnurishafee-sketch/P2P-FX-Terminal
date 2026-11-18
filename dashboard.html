@@ -686,7 +686,7 @@
     if (!grid) return;
     var picker = document.getElementById('calPicker');
     var ym = (picker && picker.value) ? picker.value : '2026-11';
-    var parts = ym.split('-');
+        var parts = ym.split('-');
     var year = parseInt(parts[0], 10);
     var month = parseInt(parts[1], 10);
 
@@ -768,7 +768,6 @@
 
     grid.innerHTML = heads + cells;
     renderPerfChart();
-  }
 
   function renderCalEvents() {
     var b = document.getElementById('econBody');
