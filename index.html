@@ -842,15 +842,27 @@
   document.getElementById('calMonth').value = now.toISOString().slice(0, 7);
 
   function openJournalApp() {
+    const session = localStorage.getItem('p2p_fx_session');
+    if (!session) {
+      window.location.href = 'auth.html';
+      return;
+    }
     document.getElementById('landingView').style.display = 'none';
     document.getElementById('appView').style.display = 'block';
     window.scrollTo(0, 0);
     renderAll();
   }
+
   function closeJournalApp() {
     document.getElementById('appView').style.display = 'none';
     document.getElementById('landingView').style.display = 'block';
+    window.history.replaceState({}, '', 'index.html');
     window.scrollTo(0, 0);
+  }
+
+  // Auto-open journal when redirected back from auth.html after OTP verification
+  if (new URLSearchParams(window.location.search).get('journal') === '1' && localStorage.getItem('p2p_fx_session')) {
+    openJournalApp();
   }
   function switchAppTab(id, btn) {
     document.querySelectorAll('.app-tab').forEach(el => el.style.display = 'none');
