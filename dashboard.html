@@ -1719,8 +1719,11 @@
 
   var trades = JSON.parse(localStorage.getItem('p2p_fx_terminal_trades') || '[]');
   var ideas = JSON.parse(localStorage.getItem('p2p_fx_ideas') || '[{"user":"Shafee (Admin)","text":"XAUUSD LONG — Holding London VWAP support."}]');
-  var daysLeft = Math.max(0, Math.ceil(7 - ((Date.now() - new Date(user.createdAt || Date.now()).getTime()) / 86400000)));
-  var isPro = daysLeft > 0;
+  var ADMIN_EMAILS = ['shahnurishafee@gmail.com']; // Replace/add your exact admin login email(s)
+  var isAdmin = ADMIN_EMAILS.indexOf(String(user.email || '').trim().toLowerCase()) !== -1;
+  var daysLeft = isAdmin ? 9999 : Math.max(0, Math.ceil(7 - ((Date.now() - new Date(user.createdAt || Date.now()).getTime()) / 86400000)));
+  var isPro = isAdmin || daysLeft > 0;
+
 
   try {
     var initChar = (user.name || 'M').charAt(0).toUpperCase();
@@ -1730,7 +1733,12 @@
     if (document.getElementById('sideName')) document.getElementById('sideName').textContent = user.name || 'Trader';
     if (document.getElementById('setFullName')) document.getElementById('setFullName').textContent = user.name || 'Trader';
     if (document.getElementById('setEmail')) document.getElementById('setEmail').textContent = user.email || '';
-    if (document.getElementById('trialTag')) document.getElementById('trialTag').textContent = isPro ? daysLeft + 'D FREE TRIAL' : 'FREE PLAN';
+   if (isAdmin) {
+      if (document.getElementById('trialTag')) { document.getElementById('trialTag').textContent = '👑 ELITE ADMIN'; document.getElementById('trialTag').className = 'tag-g'; }
+      if (document.getElementById('btBadge')) { document.getElementById('btBadge').textContent = '👑 ELITE ADMIN • UNLIMITED'; document.getElementById('btBadge').className = 'tag-g'; }
+    } else if (document.getElementById('trialTag')) {
+      document.getElementById('trialTag').textContent = isPro ? daysLeft + 'D FREE TRIAL' : 'FREE PLAN';
+    }
     if (document.getElementById('myPovCode')) document.getElementById('myPovCode').value = 'VIEW-849201';
     if (document.getElementById('tDat')) document.getElementById('tDat').valueAsDate = new Date();
   } catch (e) {}
