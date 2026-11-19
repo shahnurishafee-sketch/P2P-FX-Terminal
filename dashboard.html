@@ -603,13 +603,20 @@
   }
   function jumpBtReplay(idxVal) {
     btReplayIdx = parseInt(idxVal, 10) || 45;
-    var start = Math.max(0, btReplayIdx - 48);
+    var start = Math.max(0, btReplayIdx - btVisibleCount + 1);
     btBars = btFullHistory.slice(start, btReplayIdx + 1).map(function(b) { return Object.assign({}, b); });
     var dLbl = document.getElementById('btReplayDate');
     var last = btBars[btBars.length - 1];
     if (dLbl && last) dLbl.textContent = (last.fullDate || '') + ' (' + btReplayIdx + '/' + (btFullHistory.length - 1) + ')';
     updateBtUi();
     drawBt();
+  }
+
+  function resetBtZoom() {
+    btVisibleCount = 48;
+    btYZoom = 1.0;
+    btYOffset = 0;
+    jumpBtReplay(btReplayIdx);
   }
 
   function isHourInSession(hr, sessKey) {
@@ -694,7 +701,12 @@
     btPendingPt = null;
     drawBt();
   }
-
+  var btVisibleCount = 48; // Horizontal zoom (number of candles shown: 15 to 160)
+  var btYZoom = 1.0;       // Vertical price-axis zoom (0.3x to 4.0x)
+  var btYOffset = 0;       // Vertical price-axis pan offset
+  var btDragMode = null;   // 'chart' | 'yAxis' | 'xAxis'
+  var btDragStart = null;
+  
   function getBtScale(c) {
     var padR = 76, padT = 18, padB = 26, padL = 12;
     var minP = Infinity, maxP = -Infinity;
@@ -706,9 +718,12 @@
       minP = Math.min(minP, btPos.entry, btPos.sl, btPos.tp);
       maxP = Math.max(maxP, btPos.entry, btPos.sl, btPos.tp);
     }
-    var range = (maxP - minP) || 1;
-    minP -= range * 0.08;
-    maxP += range * 0.08;
+    var rawRange = (maxP - minP) || 1;
+    var midP = (maxP + minP) / 2 + btYOffset;
+    var halfRange = (rawRange * 0.58) / btYZoom;
+    minP = midP - halfRange;
+    maxP = midP + halfRange;
+
     var plotW = c.width - padL - padR;
     var plotH = c.height - padT - padB;
     return {
@@ -730,16 +745,6 @@
       res.push(ema);
     }
     return res;
-  }
-  function jumpBtReplay(idxVal) {
-    btReplayIdx = parseInt(idxVal, 10) || 45;
-    var start = Math.max(0, btReplayIdx - 48);
-    btBars = btFullHistory.slice(start, btReplayIdx + 1).map(function(b) { return Object.assign({}, b); });
-    var dLbl = document.getElementById('btReplayDate');
-    var last = btBars[btBars.length - 1];
-    if (dLbl && last) dLbl.textContent = (last.fullDate || '') + ' (' + btReplayIdx + '/' + (btFullHistory.length - 1) + ')';
-    updateBtUi();
-    drawBt();
   }
 
   function isHourInSession(hr, sessKey) {
@@ -1091,16 +1096,95 @@
       ctx.setLineDash(new Array());
     }
   }
-  (function bindBtCanvasEvents() {
+   (function bindBtCanvasEvents() {
     var c = document.getElementById('btCvs');
     if (!c) return;
 
+    function getCanvasCoords(e) {
+      var rect = c.getBoundingClientRect();
+      return {
+        x: (e.clientX - rect.left) * (c.width / rect.width),
+        y: (e.clientY - rect.top) * (c.height / rect.height)
+      };
+    }
+
+    c.addEventListener('mousedown', function(e) {
+      if (!btBars.length) return;
+      var pt = getCanvasCoords(e);
+      if (pt.x >= c.width - 76) {
+        btDragMode = 'yAxis'; // Right-hand Price Scale drag -> Vertical Zoom
+        btDragStart = { x: pt.x, y: pt.y, yZoom: btYZoom };
+      } else if (pt.y >= c.height - 26) {
+        btDragMode = 'xAxis'; // Bottom Time Scale drag -> Horizontal Zoom
+        btDragStart = { x: pt.x, y: pt.y, vis: btVisibleCount };
+      } else if (btTool === 'cross') {
+        btDragMode = 'chart'; // Main chart drag -> Pan Left/Right & Up/Down
+        btDragStart = { x: pt.x, y: pt.y, idx: btReplayIdx, yOff: btYOffset };
+      }
+    });
+
+    window.addEventListener('mouseup', function() {
+      btDragMode = null;
+      btDragStart = null;
+    });
+
+    c.addEventListener('dblclick', function(e) {
+      var pt = getCanvasCoords(e);
+      if (pt.x >= c.width - 76 || pt.y >= c.height - 26) resetBtZoom();
+    });
+
+    c.addEventListener('wheel', function(e) {
+      if (!btBars.length) return;
+      e.preventDefault();
+      var pt = getCanvasCoords(e);
+      if (pt.x >= c.width - 76) {
+        btYZoom = Math.max(0.25, Math.min(5.0, btYZoom * (e.deltaY < 0 ? 1.12 : 0.88)));
+        drawBt();
+      } else {
+        var deltaBars = e.deltaY < 0 ? -4 : 4;
+        btVisibleCount = Math.max(14, Math.min(180, btVisibleCount + deltaBars));
+        jumpBtReplay(btReplayIdx);
+      }
+    }, { passive: false });
+
     c.addEventListener('mousemove', function(e) {
       if (!btBars.length) return;
-      var rect = c.getBoundingClientRect();
-      var x = (e.clientX - rect.left) * (c.width / rect.width);
-      var y = (e.clientY - rect.top) * (c.height / rect.height);
+      var pt = getCanvasCoords(e);
+      var x = pt.x, y = pt.y;
       btMouse = { x: x, y: y };
+
+      if (x >= c.width - 76) c.style.cursor = 'ns-resize';
+      else if (y >= c.height - 26) c.style.cursor = 'ew-resize';
+      else c.style.cursor = btDragMode === 'chart' ? 'grabbing' : 'crosshair';
+
+      if (btDragMode === 'yAxis' && btDragStart) {
+        var dy = btDragStart.y - y;
+        btYZoom = Math.max(0.25, Math.min(5.0, btDragStart.yZoom * Math.exp(dy * 0.008)));
+        drawBt();
+        return;
+      }
+      if (btDragMode === 'xAxis' && btDragStart) {
+        var dx = x - btDragStart.x;
+        btVisibleCount = Math.max(14, Math.min(180, Math.round(btDragStart.vis - dx * 0.22)));
+        jumpBtReplay(btReplayIdx);
+        return;
+      }
+      if (btDragMode === 'chart' && btDragStart && btFullHistory.length) {
+        var pxPerBar = (c.width - 88) / btBars.length;
+        var shiftBars = Math.round((x - btDragStart.x) / Math.max(4, pxPerBar));
+        var targetIdx = Math.max(20, Math.min(btFullHistory.length - 1, btDragStart.idx - shiftBars));
+        var scPan = getBtScale(c);
+        var pricePerPx = (scPan.maxP - scPan.minP) / scPan.plotH;
+        btYOffset = btDragStart.yOff + (y - btDragStart.y) * pricePerPx;
+        if (targetIdx !== btReplayIdx) {
+          var sl = document.getElementById('btReplaySlider');
+          if (sl) sl.value = targetIdx;
+          jumpBtReplay(targetIdx);
+        } else {
+          drawBt();
+        }
+        return;
+      }
 
       var sc = getBtScale(c);
       var idx = sc.xToIdx(x);
@@ -1124,11 +1208,10 @@
 
     c.addEventListener('click', function(e) {
       if (!btBars.length) return;
-      var rect = c.getBoundingClientRect();
-      var x = (e.clientX - rect.left) * (c.width / rect.width);
-      var y = (e.clientY - rect.top) * (c.height / rect.height);
+      var pt = getCanvasCoords(e);
+      var x = pt.x, y = pt.y;
+      if (x >= c.width - 76 || y >= c.height - 26) return;
 
-      // Top-left Quick SELL / BUY Bid-Ask Box clicks on canvas
       if (y >= 14 && y <= 44) {
         if (x >= 16 && x <= 94) { btOrder('SELL'); return; }
         if (x >= 136 && x <= 214) { btOrder('BUY'); return; }
