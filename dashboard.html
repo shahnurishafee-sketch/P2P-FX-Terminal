@@ -87,6 +87,10 @@
     <button class="nav-btn nav-sub" onclick="go('lounge', this)"><span>Lounges</span> <span class="tag-g">PRO</span></button>
     <button class="nav-btn nav-sub" onclick="go('leaderboard', this)"><span>🏆 Leaderboard</span></button>
     <button class="nav-btn" onclick="go('tools', this)"><span>🛠 Tools</span></button>
+            <div style="margin-top:10px; padding-top:10px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:6px;">
+          <a href="https://whatsapp.com" target="_blank" rel="noopener" class="btn-g" style="text-decoration:none; text-align:center; padding:7px 10px; font-size:0.78rem;">💬 WhatsApp Community</a>
+          <a href="https://t.me" target="_blank" rel="noopener" class="btn-o" style="text-decoration:none; text-align:center; padding:7px 10px; font-size:0.78rem;">✈️ Telegram Channel</a>
+        </div>
 
     <div class="mini" style="margin:12px 0; text-align:center;">
       <small style="margin-bottom:6px;">Found a bug? Report an issue</small>
@@ -2022,6 +2026,49 @@
 
     <!-- 13. SUBSCRIPTION PRICING -->
     <section id="v-sub" class="view">
+              <!-- Direct Bank / UPI & Trust Wallet (USDT) Payment Card -->
+        <div class="card" style="margin-top:14px; border-color:var(--green);">
+          <div class="card-h">
+            <span>💳 Direct Payment (Bank / UPI & Trust Wallet USDT)</span>
+            <span class="tag-g">0% FEE • INSTANT ACTIVATION</span>
+          </div>
+          <p style="color:var(--muted); font-size:0.84rem; margin-bottom:12px;">
+            Pay directly to our official Bank/UPI or Trust Wallet (USDT) and send your transaction screenshot on WhatsApp or Telegram for instant Pro/Elite activation.
+          </p>
+
+          <div class="g2" style="gap:12px; margin-bottom:12px;">
+            <!-- Option 1: Direct Bank / UPI (India) -->
+            <div class="mini" style="text-align:left;">
+              <small style="color:var(--green); font-weight:800;">🏦 DIRECT BANK / UPI (INR)</small>
+              <div style="font-size:0.84rem; margin-top:6px; line-height:1.6;">
+                <div><strong>UPI ID:</strong> <code id="payUpiText">yourname@upi</code> <button type="button" class="btn-o" style="padding:2px 7px; font-size:0.7rem;" onclick="copyPayText('payUpiText', this)">Copy</button></div>
+                <div><strong>Account Name:</strong> Shahnuri Shafee</div>
+                <div><strong>Bank / A/C No:</strong> <code id="payBankText">XXXX-XXXX-1234</code> <button type="button" class="btn-o" style="padding:2px 7px; font-size:0.7rem;" onclick="copyPayText('payBankText', this)">Copy</button></div>
+                <div><strong>IFSC Code:</strong> <code>HDFC0001234</code></div>
+              </div>
+              <div style="margin-top:8px;">
+                <a href="upi://pay?pa=yourname@upi&pn=P2P%20FX%20Terminal&cu=INR" class="btn-g" style="display:inline-block; text-decoration:none; padding:6px 12px; font-size:0.78rem;">📲 Pay via UPI App (GPay / PhonePe / Paytm)</a>
+              </div>
+            </div>
+
+            <!-- Option 2: Trust Wallet Crypto (USDT TRC20 / BEP20) -->
+            <div class="mini" style="text-align:left;">
+              <small style="color:#38bdf8; font-weight:800;">🛡️ TRUST WALLET CRYPTO (USDT)</small>
+              <div style="font-size:0.84rem; margin-top:6px; line-height:1.6;">
+                <div><strong>USDT (TRC20):</strong> <code id="payTrcText" style="word-break:break-all;">TYourTrustWalletTRC20AddressHere</code> <button type="button" class="btn-o" style="padding:2px 7px; font-size:0.7rem;" onclick="copyPayText('payTrcText', this)">Copy</button></div>
+                <div style="margin-top:4px;"><strong>USDT (BEP20 / BSC):</strong> <code id="payBepText" style="word-break:break-all;">0xYourTrustWalletBEP20AddressHere</code> <button type="button" class="btn-o" style="padding:2px 7px; font-size:0.7rem;" onclick="copyPayText('payBepText', this)">Copy</button></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Community & Payment Confirmation Buttons -->
+          <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <a href="https://wa.me" target="_blank" rel="noopener" class="btn-g" style="text-decoration:none; padding:8px 14px; font-size:0.82rem;">✅ Send Payment Proof on WhatsApp</a>
+            <a href="https://whatsapp.com" target="_blank" rel="noopener" class="btn-o" style="text-decoration:none; padding:8px 14px; font-size:0.82rem;">💬 Join WhatsApp Community</a>
+            <a href="https://t.me" target="_blank" rel="noopener" class="btn-o" style="text-decoration:none; padding:8px 14px; font-size:0.82rem;">✈️ Join Telegram Channel</a>
+          </div>
+        </div>
+
       <div style="text-align:center; margin-bottom:16px;">
         <h2 style="margin:0 0 8px;">Simple, transparent pricing</h2>
         <button id="mBtn" class="btn-g" onclick="setCycle('m')">Monthly</button>
@@ -2585,6 +2632,16 @@ renderAll();
       btn.disabled = false;
       btn.textContent = 'Connect & Sync Trades';
     }
+  }
+    if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1200);
+
+  function copyPayText(elId, btn) {
+    var el = document.getElementById(elId);
+    if (!el) return;
+    navigator.clipboard.writeText(el.textContent.trim());
+    var old = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(function() { btn.textContent = old; }, 1500);
   }
 </script>
 </body>
