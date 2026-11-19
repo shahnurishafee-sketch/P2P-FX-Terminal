@@ -1519,6 +1519,29 @@
           <div class="mini"><small>FLOATING P&L</small><strong id="dmFloat">$0.00</strong></div>
           <div class="mini"><small>FREE MARGIN / LEV</small><strong id="dmMargin">$10,000.00 (1:500)</strong></div>
         </div>
+        <!-- Live TradingView-Style Candlestick Chart for Selected Demo Pair -->
+        <div class="card" style="padding:12px; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <strong id="dmChartTitle" style="font-size:0.95rem;">📈 XAUUSD • Live Market Chart</strong>
+              <div id="dmTfBar" style="display:flex; gap:3px; background:var(--bg); padding:3px; border-radius:7px; border:1px solid var(--border);">
+                <button type="button" class="btn-g" style="padding:3px 7px; font-size:0.72rem;" onclick="setDemoTf('1m', this)">1m</button>
+                <button type="button" class="btn-o" style="padding:3px 7px; font-size:0.72rem;" onclick="setDemoTf('5m', this)">5m</button>
+                <button type="button" class="btn-o" style="padding:3px 7px; font-size:0.72rem;" onclick="setDemoTf('15m', this)">15m</button>
+                <button type="button" class="btn-o" style="padding:3px 7px; font-size:0.72rem;" onclick="setDemoTf('1H', this)">1H</button>
+                <button type="button" class="btn-o" style="padding:3px 7px; font-size:0.72rem;" onclick="setDemoTf('4H', this)">4H</button>
+                <button type="button" class="btn-o" style="padding:3px 7px; font-size:0.72rem;" onclick="setDemoTf('1D', this)">1D</button>
+              </div>
+            </div>
+            <div style="font-family:monospace; font-size:0.75rem; color:var(--muted); display:flex; gap:12px; flex-wrap:wrap;">
+              <span>O: <strong id="dmLgO" style="color:var(--text);">—</strong></span>
+              <span>H: <strong id="dmLgH" class="win">—</strong></span>
+              <span>L: <strong id="dmLgL" class="loss">—</strong></span>
+              <span>C: <strong id="dmLgC" style="color:var(--text);">—</strong></span>
+            </div>
+          </div>
+          <canvas id="dmCvs" width="980" height="330" style="width:100%; height:330px; background:#050a08; border:1px solid var(--border); border-radius:10px; cursor:crosshair; display:block;"></canvas>
+        </div>
 
         <!-- Step C: Market Watch (All Forex, Metals & Crypto Pairs) + Order Ticket -->
         <div class="g2" style="gap:12px; margin-bottom:12px;">
@@ -1790,6 +1813,30 @@
           else if (pos.tp !== null && currPrice <= pos.tp) closeDemoPosition(pos.ticket, 'Take Profit Hit', pos.tp);
         }
       }
+    }
+      // ... right after the closing } of if (demoState && demoState.positions.length) ...
+
+      // 👇 PASTE THE selCfg CANDLE-TICK BLOCK RIGHT HERE 👇
+      var selCfg = demoPairs[demoSelectedPair];
+      if (selCfg && dmBars.length) {
+        var activeBar = dmBars[dmBars.length - 1];
+        activeBar.c = selCfg.bid;
+        if (activeBar.c > activeBar.h) activeBar.h = activeBar.c;
+        if (activeBar.c < activeBar.l) activeBar.l = activeBar.c;
+        dmSecLeft--;
+        if (dmSecLeft <= 0) {
+          dmSecLeft = dmTfSecs[dmTf] || 60;
+          dmBars.push({
+            o: selCfg.bid, h: selCfg.bid, l: selCfg.bid, c: selCfg.bid,
+            t: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })
+          });
+          if (dmBars.length > 58) dmBars.shift();
+        }
+        drawDemoChart();
+      }
+
+      renderDemoMarketWatch();
+      renderDemoTerminal();
     }
 
     renderDemoMarketWatch();
@@ -2633,7 +2680,244 @@ renderAll();
       btn.textContent = 'Connect & Sync Trades';
     }
   }
-    if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1200);
+    // === LIVE TRADINGVIEW-STYLE CHART FOR DEMO ACCOUNT ===
+  var dmTf = '1m';
+  var dmBars = new Array();
+  var dmMouse = null;
+  var dmSecLeft = 60;
+  var dmTfSecs = { '1m': 60, '5m': 300, '15m': 900, '1H': 3600, '4H': 14400, '1D': 86400 };
+  var dmTfMult = { '1m': 1.0, '5m': 1.8, '15m': 2.8, '1H': 4.5, '4H': 7.5, '1D': 14.0 };
+
+  function setDemoTf(tf, btn) {
+    dmTf = tf;
+    dmSecLeft = dmTfSecs[tf] || 60;
+    var btns = document.querySelectorAll('#dmTfBar button');
+    for (var i = 0; i < btns.length; i++) btns[i].className = 'btn-o';
+    if (btn) btn.className = 'btn-g';
+    buildDemoCandles();
+  }
+
+  async function buildDemoCandles() {
+    var p = demoPairs[demoSelectedPair];
+    if (!p) return;
+    var titleEl = document.getElementById('dmChartTitle');
+    if (titleEl) titleEl.textContent = '📈 ' + demoSelectedPair + ' (' + dmTf + ') • Live Market Chart';
+
+    dmBars = new Array();
+    dmSecLeft = dmTfSecs[dmTf] || 60;
+
+    // Try real Binance historical candles first for supported pairs
+    if (p.binance) {
+      try {
+        var bMap = { '1m': '1m', '5m': '5m', '15m': '15m', '1H': '1h', '4H': '4h', '1D': '1d' };
+        var url = ['https://', '://binance.com', '/api/v3/klines?symbol='].join('') + p.binance + '&interval=' + (bMap[dmTf] || '1m') + '&limit=55';
+        var res = await fetch(url);
+        var arr = await res.json();
+        if (Array.isArray(arr) && arr.length > 10) {
+          for (var i = 0; i < arr.length; i++) {
+            var k = arr[i];
+            var dt = new Date(k.at(0));
+            dmBars.push({
+              o: +parseFloat(k.at(1)).toFixed(p.dec),
+              h: +parseFloat(k.at(2)).toFixed(p.dec),
+              l: +parseFloat(k.at(3)).toFixed(p.dec),
+              c: +parseFloat(k.at(4)).toFixed(p.dec),
+              t: dt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })
+            });
+          }
+          var lastReal = dmBars[dmBars.length - 1];
+          var sp = +(p.ask - p.bid).toFixed(p.dec);
+          p.bid = lastReal.c;
+          p.ask = +(p.bid + Math.max(sp, p.step * 0.2)).toFixed(p.dec);
+        }
+      } catch (e) {}
+    }
+
+    // Build realistic candles anchored directly to the live Bid price if not loaded from Binance
+    if (!dmBars.length) {
+      var mult = dmTfMult[dmTf] || 1.0;
+      var step = p.step * mult * 3.2;
+      var cur = p.bid;
+      var now = Date.now();
+      var barMs = dmSecLeft * 1000;
+      var temp = new Array();
+      for (var b = 0; b < 52; b++) {
+        var c = cur;
+        var o = +(c + (Math.random() - 0.5) * step * 1.8).toFixed(p.dec);
+        var h = +(Math.max(o, c) + Math.random() * step * 0.8).toFixed(p.dec);
+        var l = +(Math.min(o, c) - Math.random() * step * 0.8).toFixed(p.dec);
+        var d = new Date(now - b * barMs);
+        temp.unshift({
+          o: o, h: h, l: l, c: c,
+          t: d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })
+        });
+        cur = o;
+      }
+      dmBars = temp;
+    }
+
+    drawDemoChart();
+  }
+
+  function drawDemoChart() {
+    var c = document.getElementById('dmCvs');
+    if (!c || !dmBars.length) return;
+    var ctx = c.getContext('2d');
+    var p = demoPairs[demoSelectedPair] || { dec: 2, bid: 0, ask: 0, step: 0.5 };
+    var padL = 12, padR = 76, padT = 16, padB = 24;
+    var plotW = c.width - padL - padR;
+    var plotH = c.height - padT - padB;
+
+    var minP = Infinity, maxP = -Infinity;
+    for (var i = 0; i < dmBars.length; i++) {
+      if (dmBars[i].l < minP) minP = dmBars[i].l;
+      if (dmBars[i].h > maxP) maxP = dmBars[i].h;
+    }
+    if (demoState && Array.isArray(demoState.positions)) {
+      for (var op = 0; op < demoState.positions.length; op++) {
+        var pos = demoState.positions[op];
+        if (pos.sym === demoSelectedPair) {
+          minP = Math.min(minP, pos.entry);
+          maxP = Math.max(maxP, pos.entry);
+          if (pos.sl !== null) { minP = Math.min(minP, pos.sl); maxP = Math.max(maxP, pos.sl); }
+          if (pos.tp !== null) { minP = Math.min(minP, pos.tp); maxP = Math.max(maxP, pos.tp); }
+        }
+      }
+    }
+    var rng = (maxP - minP) || (p.step * 5) || 1;
+    minP -= rng * 0.08;
+    maxP += rng * 0.08;
+
+    function pToY(val) { return padT + ((maxP - val) / (maxP - minP)) * plotH; }
+    function idxToX(idx) { return padL + (idx + 0.5) * (plotW / dmBars.length); }
+
+    ctx.clearRect(0, 0, c.width, c.height);
+
+    // Grid + Right-Side Price Scale
+    ctx.strokeStyle = '#13221c';
+    ctx.lineWidth = 1;
+    ctx.font = '11px monospace';
+    for (var g = 0; g <= 5; g++) {
+      var gy = padT + (g / 5) * plotH;
+      var gp = maxP - (g / 5) * (maxP - minP);
+      ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(c.width - padR, gy); ctx.stroke();
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText(gp.toFixed(p.dec), c.width - padR + 6, gy + 4);
+    }
+
+    // Bottom X-Axis Timestamps
+    var stepX = Math.max(1, Math.floor(dmBars.length / 7));
+    for (var ti = 0; ti < dmBars.length; ti += stepX) {
+      var tx = idxToX(ti);
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText(dmBars[ti].t || '', tx - 16, c.height - 7);
+    }
+
+    // OHLC Candlesticks
+    var barW = plotW / dmBars.length;
+    for (var k = 0; k < dmBars.length; k++) {
+      var b = dmBars[k];
+      var x = idxToX(k);
+      var up = b.c >= b.o;
+      var col = up ? '#00ff88' : '#ff2a5f';
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(x, pToY(b.h)); ctx.lineTo(x, pToY(b.l)); ctx.stroke();
+
+      var yO = pToY(b.o), yC = pToY(b.c);
+      ctx.fillStyle = col;
+      ctx.fillRect(x - barW * 0.32, Math.min(yO, yC), Math.max(3, barW * 0.64), Math.max(2, Math.abs(yC - yO)));
+    }
+
+    // Draw Open Demo Positions (Entry, SL, TP lines on chart)
+    if (demoState && Array.isArray(demoState.positions)) {
+      for (var d = 0; d < demoState.positions.length; d++) {
+        var dp = demoState.positions[d];
+        if (dp.sym !== demoSelectedPair) continue;
+        var ey = pToY(dp.entry);
+        ctx.strokeStyle = '#38bdf8';
+        ctx.setLineDash(new Array(4, 4));
+        ctx.beginPath(); ctx.moveTo(padL, ey); ctx.lineTo(c.width - padR, ey); ctx.stroke();
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillText(dp.side + ' ' + dp.lots + 'L @ ' + dp.entry.toFixed(p.dec), padL + 8, ey - 4);
+
+        if (dp.sl !== null) {
+          var sy = pToY(dp.sl);
+          ctx.strokeStyle = '#ff2a5f';
+          ctx.beginPath(); ctx.moveTo(padL, sy); ctx.lineTo(c.width - padR, sy); ctx.stroke();
+          ctx.fillStyle = '#ff2a5f';
+          ctx.fillText('SL ' + dp.sl.toFixed(p.dec), padL + 8, sy - 4);
+        }
+        if (dp.tp !== null) {
+          var ty = pToY(dp.tp);
+          ctx.strokeStyle = '#00ff88';
+          ctx.beginPath(); ctx.moveTo(padL, ty); ctx.lineTo(c.width - padR, ty); ctx.stroke();
+          ctx.fillStyle = '#00ff88';
+          ctx.fillText('TP ' + dp.tp.toFixed(p.dec), padL + 8, ty - 4);
+        }
+        ctx.setLineDash(new Array());
+      }
+    }
+
+    // Live Price Line + Stacked Right-Axis Bid Price & Candle Timer
+    var last = dmBars[dmBars.length - 1];
+    var ly = pToY(last.c);
+    var tagCol = last.c >= last.o ? '#00ff88' : '#ff2a5f';
+    ctx.strokeStyle = tagCol;
+    ctx.setLineDash(new Array(2, 3));
+    ctx.beginPath(); ctx.moveTo(padL, ly); ctx.lineTo(c.width - padR, ly); ctx.stroke();
+    ctx.setLineDash(new Array());
+
+    var m = Math.floor(dmSecLeft / 60), s = dmSecLeft % 60;
+    var cdTxt = (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
+    ctx.fillStyle = tagCol;
+    ctx.fillRect(c.width - padR + 2, ly - 14, padR - 4, 28);
+    ctx.fillStyle = '#040706';
+    ctx.font = 'bold 11px monospace';
+    ctx.fillText(last.c.toFixed(p.dec), c.width - padR + 6, ly - 2);
+    ctx.font = 'bold 10px monospace';
+    ctx.fillText(cdTxt, c.width - padR + 6, ly + 11);
+
+    // P2P FX Terminal Watermark + Crosshair
+    ctx.fillStyle = 'rgba(248, 250, 252, 0.55)';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.fillText('⚡ P2P FX Terminal • DEMO LIVE', 16, c.height - padB - 8);
+
+    if (dmMouse) {
+      ctx.strokeStyle = 'rgba(248, 250, 252, 0.35)';
+      ctx.setLineDash(new Array(3, 3));
+      ctx.beginPath(); ctx.moveTo(dmMouse.x, padT); ctx.lineTo(dmMouse.x, c.height - padB); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(padL, dmMouse.y); ctx.lineTo(c.width - padR, dmMouse.y); ctx.stroke();
+      ctx.setLineDash(new Array());
+    }
+  }
+
+  (function bindDemoChartMouse() {
+    var c = document.getElementById('dmCvs');
+    if (!c) return;
+    c.addEventListener('mousemove', function(e) {
+      if (!dmBars.length) return;
+      var rect = c.getBoundingClientRect();
+      var x = (e.clientX - rect.left) * (c.width / rect.width);
+      var y = (e.clientY - rect.top) * (c.height / rect.height);
+      dmMouse = { x: x, y: y };
+      var p = demoPairs[demoSelectedPair] || { dec: 2 };
+      var idx = Math.max(0, Math.min(dmBars.length - 1, Math.floor((x - 12) / ((c.width - 88) / dmBars.length))));
+      var b = dmBars[idx];
+      if (b) {
+        if (document.getElementById('dmLgO')) document.getElementById('dmLgO').textContent = b.o.toFixed(p.dec);
+        if (document.getElementById('dmLgH')) document.getElementById('dmLgH').textContent = b.h.toFixed(p.dec);
+        if (document.getElementById('dmLgL')) document.getElementById('dmLgL').textContent = b.l.toFixed(p.dec);
+        if (document.getElementById('dmLgC')) document.getElementById('dmLgC').textContent = b.c.toFixed(p.dec);
+      }
+      drawDemoChart();
+    });
+    c.addEventListener('mouseleave', function() { dmMouse = null; drawDemoChart(); });
+  })();
+
+  buildDemoCandles();
+
+  if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1200);
 
   function copyPayText(elId, btn) {
     var el = document.getElementById(elId);
