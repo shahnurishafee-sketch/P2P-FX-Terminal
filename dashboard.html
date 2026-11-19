@@ -707,7 +707,7 @@
   var btDragMode = null;   // 'chart' | 'yAxis' | 'xAxis'
   var btDragStart = null;
   
-  function getBtScale(c) {
+    function getBtScale(c) {
     var padR = 76, padT = 18, padB = 26, padL = 12;
     var minP = Infinity, maxP = -Infinity;
     for (var i = 0; i < btBars.length; i++) {
@@ -841,9 +841,12 @@
       minP = Math.min(minP, btPos.entry, btPos.sl, btPos.tp);
       maxP = Math.max(maxP, btPos.entry, btPos.sl, btPos.tp);
     }
-    var range = (maxP - minP) || 1;
-    minP -= range * 0.08;
-    maxP += range * 0.08;
+    var rawRange = (maxP - minP) || 1;
+    var midP = (maxP + minP) / 2 + btYOffset;
+    var halfRange = (rawRange * 0.58) / btYZoom;
+    minP = midP - halfRange;
+    maxP = midP + halfRange;
+
     var plotW = c.width - padL - padR;
     var plotH = c.height - padT - padB;
     return {
@@ -855,6 +858,7 @@
       xToIdx: function(x) { return Math.max(0, Math.min(btBars.length - 1, Math.floor((x - padL) / (plotW / btBars.length)))); }
     };
   }
+
 
   function calcEmaSeries(period) {
     var k = 2 / (period + 1);
