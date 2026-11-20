@@ -3209,7 +3209,7 @@ renderAll();
         kpis[2].textContent = pf;
         kpis[3].textContent = (parseFloat(exp) >= 0 ? '+$' : '-$') + Math.abs(parseFloat(exp)).toFixed(2);
       }
-      var statRows = perfSec.querySelectorAll('strong');
+            var statRows = perfSec.querySelectorAll('strong');
       var mapValues = {
         'Total P&L': (totalPnl >= 0 ? '+$' : '-$') + Math.abs(totalPnl).toFixed(2),
         'Average Daily Volume': (closed.length ? (totalLots / closed.length).toFixed(2) : '0.00') + ' lots',
@@ -3225,10 +3225,17 @@ renderAll();
         'Profit Factor / Max Drawdown': pf + ' / -$' + Math.abs(parseFloat(maxLoss)).toFixed(2)
       };
       for (var r = 0; r < statRows.length; r++) {
-        var rowLabel = statRows[r].parentElement ? statRows[r].parentElement.textContent : '';
+        var rowEl = statRows[r].closest('tr') || statRows[r].closest('div') || statRows[r].parentElement;
+        var rowLabel = rowEl ? rowEl.textContent : '';
         var keys = Object.keys(mapValues);
         for (var k = 0; k < keys.length; k++) {
-          if (rowLabel.indexOf(keys[k]) !== -1) statRows[r].textContent = mapValues[keys[k]];
+          if (rowLabel.indexOf(keys[k]) !== -1) {
+            statRows[r].textContent = mapValues[keys[k]];
+            if (keys[k] === 'Total P&L' || keys[k] === 'Trade Expectancy') {
+              statRows[r].className = totalPnl >= 0 ? 'win' : 'loss';
+            }
+            break;
+          }
         }
       }
     }
@@ -3266,26 +3273,34 @@ renderAll();
           var rewardPts = sel.tp ? Math.abs(sel.tp - sel.ent) : (sel.ext ? Math.abs(sel.ext - sel.ent) : 0);
           var rrRatio = riskPts > 0 ? '1 : ' + (rewardPts / riskPts).toFixed(2) : 'N/A (Add SL)';
           var durMins = calcTradeDurationMins(sel);
+          var pnlTxt = ((sel.pnl || 0) >= 0 ? '+$' : '-$') + Math.abs(sel.pnl || 0).toFixed(2);
+          var pnlCls = (sel.pnl || 0) >= 0 ? 'win' : 'loss';
 
           rightCard.innerHTML =
-'📊 Execution & R:R Breakdown — ' + sel.sym + '' + (sel.source || 'Manual') + '' +
-'' +
-'RISK : REWARD' + rrRatio + '' +
-'OPEN → CLOSE TIME' + (sel.openTime || '—') + ' → ' + (sel.closeTime || '—') + '' +
-'HOLD DURATION' + formatHoldTime(durMins) + '' +
-'NET RESULT' + ((sel.pnl || 0) >= 0 ? '+$' : '-$') + Math.abs(sel.pnl || 0).toFixed(2) + '' +
-'' +
-'' +
-'ENTRY' + (sel.ent || '—') + '' +
-'STOP LOSS' + (sel.sl || '—') + '' +
-'TAKE PROFIT' + (sel.tp || '—') + '' +
-'EXIT' + (sel.ext || 'Open') + '' +
-'' +
-'SETUP & EXECUTION NOTES' + (sel.not || 'No notes recorded for this trade.') + '';
-}
-}
-}
-}
+            '<div class="card-h" style="margin-bottom:14px;">' +
+              '<div><strong style="font-size:1.05rem;">📊 Execution & R:R Breakdown — ' + sel.sym + ' (' + sel.side + ')</strong></div>' +
+              '<span class="tag-g">' + (sel.source || 'Manual') + '</span>' +
+            '</div>' +
+            '<div class="g4" style="gap:10px; margin-bottom:12px;">' +
+              '<div class="mini"><small>RISK : REWARD</small><strong class="win">' + rrRatio + '</strong></div>' +
+              '<div class="mini"><small>OPEN → CLOSE TIME</small><strong>' + (sel.openTime || '—') + ' → ' + (sel.closeTime || '—') + '</strong></div>' +
+              '<div class="mini"><small>HOLD DURATION</small><strong>' + formatHoldTime(durMins) + '</strong></div>' +
+              '<div class="mini"><small>NET RESULT</small><strong class="' + pnlCls + '">' + pnlTxt + '</strong></div>' +
+            '</div>' +
+            '<div class="g4" style="gap:10px; margin-bottom:14px;">' +
+              '<div class="mini"><small>ENTRY PRICE</small><strong>' + (sel.ent || '—') + '</strong></div>' +
+              '<div class="mini"><small>STOP LOSS (SL)</small><strong class="loss">' + (sel.sl || '—') + '</strong></div>' +
+              '<div class="mini"><small>TAKE PROFIT (TP)</small><strong class="win">' + (sel.tp || '—') + '</strong></div>' +
+              '<div class="mini"><small>EXIT PRICE</small><strong>' + (sel.ext || 'Open') + '</strong></div>' +
+            '</div>' +
+            '<div class="mini" style="text-align:left; padding:12px;">' +
+              '<small style="color:var(--green); font-weight:700;">📝 SETUP & EXECUTION NOTES</small>' +
+              '<p style="margin:6px 0 0; font-size:0.86rem; line-height:1.5; color:var(--text);">' + (sel.not || 'No notes recorded for this trade.') + '</p>' +
+            '</div>';
+        }
+      }
+    }
+  }
 var prevRenderAllForAnalysis = window.renderAll;
 window.renderAll = function() {
 if (typeof prevRenderAllForAnalysis === 'function') prevRenderAllForAnalysis();
