@@ -18,6 +18,20 @@
     body { margin: 0; font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); }
     .app { display: flex; min-height: 100vh; padding-bottom: 34px; }
     .sidebar {
+        /* Resizable & Collapsible Sidebar */
+  aside, .sidebar { position: relative; transition: width 0.08s ease; }
+  #sbResizer {
+    position: absolute; top: 0; right: -3px; width: 6px; height: 100%;
+    cursor: ew-resize; z-index: 50; background: transparent;
+  }
+  #sbResizer:hover, #sbResizer.active { background: var(--green); opacity: 0.65; }
+  .sb-collapsed { width: 58px !important; min-width: 58px !important; padding-left: 6px !important; padding-right: 6px !important; overflow: hidden !important; }
+  .sb-collapsed .nav-btn span:not(:first-child),
+  .sb-collapsed #analysisSubMenu,
+  .sb-collapsed .mini,
+  .sb-collapsed small { display: none !important; }
+  .sb-collapsed .nav-btn { justify-content: center !important; padding: 10px 4px !important; font-size: 1.05rem !important; }
+
       width: 245px; background: var(--side); border-right: 1px solid var(--border);
       padding: 16px 12px; display: flex; flex-direction: column; height: 100vh;
       position: sticky; top: 0; overflow-y: auto; flex-shrink: 0;
@@ -3876,6 +3890,81 @@ setTimeout(function() { renderAnalysisViews(); }, 400);
   };
 
   setTimeout(renderDashboardCurveAndStats, 450);
+    // === MOVABLE / RESIZABLE & COLLAPSIBLE SIDEBAR ===
+  (function initMovableSidebar() {
+    var sb = document.querySelector('aside') || document.querySelector('.sidebar');
+    if (!sb) return;
+
+    // 1. Add Collapse / Expand Toggle Button at Top of Sidebar
+    var toggleBtn = document.createElement('button');
+    toggleBtn.type = 'button';
+    toggleBtn.className = 'btn-o';
+    toggleBtn.title = 'Collapse / Expand Sidebar';
+    toggleBtn.style.cssText = 'width:100%; margin-bottom:10px; padding:6px 8px; font-size:0.78rem; display:flex; align-items:center; justify-content:space-between;';
+    toggleBtn.innerHTML = '<span>◧</span><span class="sb-lbl" style="font-size:0.74rem; color:var(--muted);">Drag Edge / Hide</span>';
+    sb.insertBefore(toggleBtn, sb.firstChild);
+
+    // 2. Restore Saved Width or Collapsed State
+    var savedW = localStorage.getItem('p2p_fx_sb_width');
+    var isCollapsed = localStorage.getItem('p2p_fx_sb_collapsed') === 'true';
+    if (isCollapsed) {
+      sb.classList.add('sb-collapsed');
+      toggleBtn.innerHTML = '<span>☰</span>';
+    } else if (savedW) {
+      sb.style.width = savedW + 'px';
+      sb.style.minWidth = savedW + 'px';
+    }
+
+    toggleBtn.onclick = function() {
+      var nowCollapsed = sb.classList.toggle('sb-collapsed');
+      localStorage.setItem('p2p_fx_sb_collapsed', nowCollapsed ? 'true' : 'false');
+      if (nowCollapsed) {
+        toggleBtn.innerHTML = '<span>☰</span>';
+      } else {
+        var w = localStorage.getItem('p2p_fx_sb_width') || '230';
+        sb.style.width = w + 'px';
+        sb.style.minWidth = w + 'px';
+        toggleBtn.innerHTML = '<span>◧</span><span class="sb-lbl" style="font-size:0.74rem; color:var(--muted);">Drag Edge / Hide</span>';
+      }
+      if (typeof drawBt === 'function') drawBt();
+      if (typeof drawDemoChart === 'function') drawDemoChart();
+    };
+
+    // 3. Attach Draggable Right-Edge Resizer Handle (170px – 360px)
+    var resizer = document.createElement('div');
+    resizer.id = 'sbResizer';
+    sb.appendChild(resizer);
+
+    var draggingSb = false;
+    resizer.addEventListener('mousedown', function(e) {
+      e.preventDefault();
+      draggingSb = true;
+      resizer.classList.add('active');
+      document.body.style.cursor = 'ew-resize';
+      if (sb.classList.contains('sb-collapsed')) {
+        sb.classList.remove('sb-collapsed');
+        localStorage.setItem('p2p_fx_sb_collapsed', 'false');
+        toggleBtn.innerHTML = '<span>◧</span><span class="sb-lbl" style="font-size:0.74rem; color:var(--muted);">Drag Edge / Hide</span>';
+      }
+    });
+
+    window.addEventListener('mousemove', function(e) {
+      if (!draggingSb) return;
+      var newW = Math.max(170, Math.min(360, e.clientX - sb.getBoundingClientRect().left));
+      sb.style.width = newW + 'px';
+      sb.style.minWidth = newW + 'px';
+      localStorage.setItem('p2p_fx_sb_width', String(Math.round(newW)));
+    });
+
+    window.addEventListener('mouseup', function() {
+      if (!draggingSb) return;
+      draggingSb = false;
+      resizer.classList.remove('active');
+      document.body.style.cursor = '';
+      if (typeof drawBt === 'function') drawBt();
+      if (typeof drawDemoChart === 'function') drawDemoChart();
+    });
+  })();
 </script>
 </body>
 </html>
