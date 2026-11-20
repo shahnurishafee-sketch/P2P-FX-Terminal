@@ -3210,7 +3210,7 @@ renderAll();
         kpis[3].textContent = (parseFloat(exp) >= 0 ? '+$' : '-$') + Math.abs(parseFloat(exp)).toFixed(2);
       }
             var statRows = perfSec.querySelectorAll('strong');
-      var mapValues = {
+            var mapValues = {
         'Total P&L': (totalPnl >= 0 ? '+$' : '-$') + Math.abs(totalPnl).toFixed(2),
         'Average Daily Volume': (closed.length ? (totalLots / closed.length).toFixed(2) : '0.00') + ' lots',
         'Average Winning Trade': '+$' + avgWin,
@@ -3224,21 +3224,20 @@ renderAll();
         'Trade Expectancy': (parseFloat(exp) >= 0 ? '+$' : '-$') + Math.abs(parseFloat(exp)).toFixed(2),
         'Profit Factor / Max Drawdown': pf + ' / -$' + Math.abs(parseFloat(maxLoss)).toFixed(2)
       };
-      for (var r = 0; r < statRows.length; r++) {
-        var rowEl = statRows[r].closest('tr') || statRows[r].closest('div') || statRows[r].parentElement;
-        var rowLabel = rowEl ? rowEl.textContent : '';
-        var keys = Object.keys(mapValues);
-        for (var k = 0; k < keys.length; k++) {
-          if (rowLabel.indexOf(keys[k]) !== -1) {
-            statRows[r].textContent = mapValues[keys[k]];
-            if (keys[k] === 'Total P&L' || keys[k] === 'Trade Expectancy') {
-              statRows[r].className = totalPnl >= 0 ? 'win' : 'loss';
-            }
-            break;
+      var allStatEls = perfSec.querySelectorAll('tr, div');
+      for (var r = 0; r < allStatEls.length; r++) {
+        var kids = Array.from(allStatEls[r].children);
+        if (kids.length !== 2) continue;
+        var lblTxt = (kids.at(0).textContent || '').trim();
+        if (mapValues[lblTxt] !== undefined) {
+          kids.at(1).textContent = mapValues[lblTxt];
+          if (lblTxt === 'Total P&L' || lblTxt === 'Trade Expectancy') {
+            kids.at(1).className = totalPnl >= 0 ? 'win' : 'loss';
           }
         }
       }
     }
+
 
     // 2. Update Trade Analysis Page (#v-tanalysis) 2-Panel Execution & R:R Inspector
     var taSec = document.getElementById('v-tanalysis');
