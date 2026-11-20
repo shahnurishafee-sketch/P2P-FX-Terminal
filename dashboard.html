@@ -76,9 +76,14 @@
     <button class="nav-btn active" onclick="go('dashboard', this)"><span>📊 Dashboard</span></button>
     <button class="nav-btn" onclick="go('trades', this)"><span>⇄ Trades</span></button>
     <button class="nav-btn" onclick="go('journal', this)"><span>▤ Journal</span></button>
-    <button class="nav-btn" onclick="go('perf', this)"><span>📈 Analysis</span></button>
-    <button class="nav-btn nav-sub" onclick="go('perf', this)"><span>Performance</span></button>
-    <button class="nav-btn nav-sub" onclick="go('tanalysis', this)"><span>Trade Analysis</span></button>
+            <button type="button" class="nav-btn" onclick="toggleAnalysisMenu()" style="justify-content:space-between;">
+          <span>📈 Analysis</span>
+          <span id="analysisArrow" style="font-size:0.75rem; color:var(--muted);">▾</span>
+        </button>
+        <div id="analysisSubMenu" style="display:flex; flex-direction:column; gap:3px;">
+          <button type="button" class="nav-btn nav-sub" onclick="go('perf', this)"><span>Performance</span></button>
+          <button type="button" class="nav-btn nav-sub" onclick="go('tanalysis', this)"><span>Trade Analysis</span></button>
+        </div>
     <button class="nav-btn" onclick="go('market', this)"><span>🌐 Market</span></button>
     <button class="nav-btn" onclick="go('ai', this)"><span>🤖 AI Report</span> <span class="tag-g">PRO</span></button>
     <button class="nav-btn" onclick="go('backtest', this)"><span>↺ Backtesting</span> <span class="tag-r">ELITE</span></button>
@@ -2172,6 +2177,9 @@
           </select>
         </div>
         <div><small>ENTRY DATE</small><input type="date" id="tDat" required></div>
+                <div><small>OPEN TIME</small><input type="time" id="tOpenTime" value="09:30"></div>
+        <div><small>CLOSE TIME</small><input type="time" id="tCloseTime" value="11:45"></div>
+
         <div><small>MARKET</small><select id="tMkt"><option>Forex</option><option>Metals</option><option>Crypto</option><option>Stocks</option><option>F&O</option></select></div>
         <div><small>EMOTION</small><select id="tEmo"><option>Disciplined</option><option>Confident</option><option>FOMO</option><option>Revenge</option><option>Hesitant</option></select></div>
       </div>
@@ -3049,6 +3057,224 @@ renderAll();
     btn.textContent = 'Copied!';
     setTimeout(function() { btn.textContent = old; }, 1500);
   }
+    // === COLLAPSIBLE ANALYSIS DROPDOWN + LIVE PERFORMANCE & TRADE ANALYSIS ===
+  function toggleAnalysisMenu() {
+    var menu = document.getElementById('analysisSubMenu');
+    var arrow = document.getElementById('analysisArrow');
+    if (!menu) return;
+    var isHidden = menu.style.display === 'none';
+    menu.style.display = isHidden ? 'flex' : 'none';
+    if (arrow) arrow.textContent = isHidden ? '▾' : '▸';
+  }
+
+  function calcTradeDurationMins(t) {
+    if (t.openTime && t.closeTime) {
+      var p1 = t.openTime.split(':'), p2 = t.closeTime.split(':');
+      if (p1.length >= 2 && p2.length >= 2) {
+        var m1 = parseInt(p1.at(0), 10) * 60 + parseInt(p1.at(1), 10);
+        var m2 = parseInt(p2.at(0), 10) * 60 + parseInt(p2.at(1), 10);
+        var diff = m2 - m1;
+        return diff >= 0 ? diff : diff + 1440;
+      }
+    }
+    return 0;
+  }
+
+  function formatHoldTime(totalMins) {
+    if (!totalMins || totalMins <= 0) return '—';
+    var h = Math.floor(totalMins / 60);
+    var m = Math.round(totalMins % 60);
+    return h > 0 ? h + 'h ' + m + 'm' : m + 'm';
+  }
+
+  // Capture Open/Close Time whenever + Add Trade form saves
+  (function hookTradeTimes() {
+    var origSubmit = document.getElementById('tForm') ? document.getElementById('tForm').onsubmit : null;
+    var form = document.getElementById('tForm');
+    if (form && origSubmit) {
+      form.onsubmit = function(e) {
+        var oTime = document.getElementById('tOpenTime') ? document.getElementById('tOpenTime').value : '';
+        var cTime = document.getElementById('tCloseTime') ? document.getElementById('tCloseTime').value : '';
+        origSubmit.call(this, e);
+        if (Array.isArray(trades) && trades.length) {
+          trades.at(0).openTime = oTime;
+          trades.at(0).closeTime = cTime;
+          trades.at(0).source = 'Manual';
+          localStorage.setItem('p2p_fx_terminal_trades', JSON.stringify(trades));
+          renderAnalysisViews();
+        }
+      };
+    }
+  })();
+
+  // Parse MT4 / MT5 CSV or HTML Trade History Export (with Open & Close Timestamps)
+  function importMt4Mt5Statement(rawText) {
+    if (!rawText || typeof trades === 'undefined') return 0;
+    var lines = rawText.split(/\r?\n/);
+    var added = 0;
+    for (var i = 0; i < lines.length; i++) {
+      var cols = lines[i].split(/,|\t|;/).map(function(s) { return s.replace(/"/g, '').trim(); });
+      if (cols.length < 7) continue;
+      // Match rows containing buy/sell and symbol
+      var dirIdx = cols.findIndex(function(c) { return /^(buy|sell|long|short)$/i.test(c); });
+      if (dirIdx === -1) continue;
+      var side = /buy|long/i.test(cols[dirIdx]) ? 'Long' : 'Short';
+      var sym = (cols[dirIdx + 1] || cols.at(1) || 'XAUUSD').toUpperCase();
+      var lot = parseFloat(cols[dirIdx + 2]) || 0.10;
+      var ent = parseFloat(cols[dirIdx + 3]) || 0;
+      var ext = parseFloat(cols[cols.length - 3]) || parseFloat(cols[dirIdx + 4]) || 0;
+      var pnl = parseFloat(cols[cols.length - 1]);
+      if (isNaN(pnl)) continue;
+
+      var openStamp = cols.at(0) || '';
+      var closeStamp = cols.find(function(c, idx) { return idx > dirIdx && /\d{2}:\d{2}/.test(c); }) || '';
+      var oTimeMatch = openStamp.match(/(\d{2}:\d{2})/);
+      var cTimeMatch = closeStamp.match(/(\d{2}:\d{2})/);
+      var dateMatch = openStamp.match(/(\d{4}[.\-\/]\d{2}[.\-\/]\d{2})/);
+
+      trades.unshift({
+        id: 'MT-' + Date.now() + '-' + i,
+        sym: sym,
+        side: side,
+        lot: lot,
+        ent: ent,
+        ext: ext,
+        open: false,
+        pnl: +pnl.toFixed(2),
+        dat: dateMatch ? dateMatch.at(1).replace(/\./g, '-') : new Date().toISOString().slice(0, 10),
+        openTime: oTimeMatch ? oTimeMatch.at(1) : '',
+        closeTime: cTimeMatch ? cTimeMatch.at(1) : '',
+        source: 'MT4/MT5',
+        mkt: sym.indexOf('BTC') !== -1 ? 'Crypto' : (sym.indexOf('XAU') !== -1 ? 'Metals' : 'Forex'),
+        emo: 'Disciplined',
+        not: 'Imported from MT4/MT5 Statement'
+      });
+      added++;
+    }
+    if (added > 0) {
+      localStorage.setItem('p2p_fx_terminal_trades', JSON.stringify(trades));
+      if (typeof renderAll === 'function') renderAll();
+      renderAnalysisViews();
+    }
+    return added;
+  }
+
+  function renderAnalysisViews(selectedIdx) {
+    if (typeof trades === 'undefined' || !Array.isArray(trades)) return;
+
+    // 1. Update Performance Page (#v-perf) Metrics
+    var closed = trades.filter(function(t) { return !t.open; });
+    var wins = closed.filter(function(t) { return (t.pnl || 0) > 0; });
+    var losses = closed.filter(function(t) { return (t.pnl || 0) < 0; });
+
+    var totalPnl = closed.reduce(function(s, t) { return s + (t.pnl || 0); }, 0);
+    var grossWin = wins.reduce(function(s, t) { return s + (t.pnl || 0); }, 0);
+    var grossLoss = Math.abs(losses.reduce(function(s, t) { return s + (t.pnl || 0); }, 0));
+    var winRate = closed.length ? ((wins.length / closed.length) * 100).toFixed(1) : '0';
+    var pf = grossLoss > 0 ? (grossWin / grossLoss).toFixed(2) : (grossWin > 0 ? grossWin.toFixed(2) : '0.00');
+    var exp = closed.length ? (totalPnl / closed.length).toFixed(2) : '0.00';
+    var avgWin = wins.length ? (grossWin / wins.length).toFixed(2) : '0.00';
+    var avgLoss = losses.length ? (grossLoss / losses.length).toFixed(2) : '0.00';
+    var maxWin = wins.length ? Math.max.apply(null, wins.map(function(t) { return t.pnl; })).toFixed(2) : '0.00';
+    var maxLoss = losses.length ? Math.min.apply(null, losses.map(function(t) { return t.pnl; })).toFixed(2) : '0.00';
+    var totalLots = closed.reduce(function(s, t) { return s + (parseFloat(t.lot) || 0); }, 0);
+
+    var timed = closed.map(calcTradeDurationMins).filter(function(m) { return m > 0; });
+    var avgHold = timed.length ? formatHoldTime(timed.reduce(function(a, b) { return a + b; }, 0) / timed.length) : '—';
+
+    var perfSec = document.getElementById('v-perf');
+    if (perfSec) {
+      var kpis = perfSec.querySelectorAll('.card h2');
+      if (kpis.length >= 4) {
+        kpis.at(0).textContent = (totalPnl >= 0 ? '+$' : '-$') + Math.abs(totalPnl).toFixed(2);
+        kpis.at(0).className = totalPnl >= 0 ? 'win' : 'loss';
+        kpis.at(1).textContent = winRate + '%';
+        kpis.at(2).textContent = pf;
+        kpis.at(3).textContent = (parseFloat(exp) >= 0 ? '+$' : '-$') + Math.abs(parseFloat(exp)).toFixed(2);
+      }
+      var statRows = perfSec.querySelectorAll('strong');
+      var mapValues = {
+        'Total P&L': (totalPnl >= 0 ? '+$' : '-$') + Math.abs(totalPnl).toFixed(2),
+        'Average Daily Volume': (closed.length ? (totalLots / closed.length).toFixed(2) : '0.00') + ' lots',
+        'Average Winning Trade': '+$' + avgWin,
+        'Average Losing Trade': '-$' + avgLoss,
+        'Total Number of Trades': String(closed.length),
+        'Winning Trades': String(wins.length),
+        'Losing Trades': String(losses.length),
+        'Largest Profit': '+$' + maxWin,
+        'Largest Loss': '-$' + Math.abs(parseFloat(maxLoss)).toFixed(2),
+        'Average Hold Time': avgHold,
+        'Trade Expectancy': (parseFloat(exp) >= 0 ? '+$' : '-$') + Math.abs(parseFloat(exp)).toFixed(2),
+        'Profit Factor / Max Drawdown': pf + ' / -$' + Math.abs(parseFloat(maxLoss)).toFixed(2)
+      };
+      for (var r = 0; r < statRows.length; r++) {
+        var rowLabel = statRows[r].parentElement ? statRows[r].parentElement.textContent : '';
+        var keys = Object.keys(mapValues);
+        for (var k = 0; k < keys.length; k++) {
+          if (rowLabel.indexOf(keys[k]) !== -1) statRows[r].textContent = mapValues[keys[k]];
+        }
+      }
+    }
+
+    // 2. Update Trade Analysis Page (#v-tanalysis) 2-Panel Execution & R:R Inspector
+    var taSec = document.getElementById('v-tanalysis');
+    if (taSec) {
+      var cards = taSec.querySelectorAll('.card');
+      if (cards.length >= 2) {
+        var leftCard = cards.at(0);
+        var rightCard = cards.at(1);
+        var activeIdx = selectedIdx !== undefined ? selectedIdx : 0;
+
+        var listHtml = '<div class="card-h"><span>Trade Analysis</span><span class="tag-g">' + trades.length + ' trades</span></div>';
+        if (!trades.length) {
+          listHtml += '<div style="color:var(--muted); text-align:center; padding:18px;">No trades logged yet.</div>';
+        } else {
+          listHtml += '<div style="display:flex; flex-direction:column; gap:8px;">';
+          for (var ti = 0; ti < trades.length; ti++) {
+            var tr = trades[ti];
+            var isSel = ti === activeIdx;
+            var timeStr = tr.openTime ? (tr.openTime + (tr.closeTime ? ' → ' + tr.closeTime : '')) : (tr.dat || '');
+            listHtml += '<div onclick="renderAnalysisViews(' + ti + ')" style="cursor:pointer; padding:10px 12px; border-radius:8px; border:1px solid ' + (isSel ? 'var(--green)' : 'var(--border)') + '; background:' + (isSel ? 'rgba(0,255,136,0.08)' : 'var(--bg)') + ';">' +
+              '<div style="display:flex; justify-content:space-between;"><strong>' + tr.sym + ' (' + tr.side + ')</strong><strong class="' + ((tr.pnl || 0) >= 0 ? 'win' : 'loss') + '">' + ((tr.pnl || 0) >= 0 ? '+$' : '-$') + Math.abs(tr.pnl || 0).toFixed(2) + '</strong></div>' +
+              '<div style="display:flex; justify-content:space-between; font-size:0.76rem; color:var(--muted); margin-top:4px;"><span>🕒 ' + timeStr + '</span><span>' + (tr.source || 'Manual') + '</span></div>' +
+            '</div>';
+          }
+          listHtml += '</div>';
+        }
+        leftCard.innerHTML = listHtml;
+
+        if (trades[activeIdx]) {
+          var sel = trades[activeIdx];
+          var riskPts = sel.sl ? Math.abs(sel.ent - sel.sl) : 0;
+          var rewardPts = sel.tp ? Math.abs(sel.tp - sel.ent) : (sel.ext ? Math.abs(sel.ext - sel.ent) : 0);
+          var rrRatio = riskPts > 0 ? '1 : ' + (rewardPts / riskPts).toFixed(2) : 'N/A (Add SL)';
+          var durMins = calcTradeDurationMins(sel);
+
+          rightCard.innerHTML =
+'📊 Execution & R:R Breakdown — ' + sel.sym + '' + (sel.source || 'Manual') + '' +
+'' +
+'RISK : REWARD' + rrRatio + '' +
+'OPEN → CLOSE TIME' + (sel.openTime || '—') + ' → ' + (sel.closeTime || '—') + '' +
+'HOLD DURATION' + formatHoldTime(durMins) + '' +
+'NET RESULT' + ((sel.pnl || 0) >= 0 ? '+$' : '-$') + Math.abs(sel.pnl || 0).toFixed(2) + '' +
+'' +
+'' +
+'ENTRY' + (sel.ent || '—') + '' +
+'STOP LOSS' + (sel.sl || '—') + '' +
+'TAKE PROFIT' + (sel.tp || '—') + '' +
+'EXIT' + (sel.ext || 'Open') + '' +
+'' +
+'SETUP & EXECUTION NOTES' + (sel.not || 'No notes recorded for this trade.') + '';
+}
+}
+}
+}
+var prevRenderAllForAnalysis = window.renderAll;
+window.renderAll = function() {
+if (typeof prevRenderAllForAnalysis === 'function') prevRenderAllForAnalysis();
+renderAnalysisViews();
+};
+renderAnalysisViews();
 </script>
 </body>
 </html>
