@@ -2147,26 +2147,39 @@
   <marquee scrollamount="5">🔴 USD Core CPI (MoM) 0.3% &nbsp;•&nbsp; 🟡 EUR ECB Policy Statement &nbsp;•&nbsp; 🔴 XAUUSD Gold breaks London high &nbsp;•&nbsp; 🟢 GBP UK CPI 2.6% YoY</marquee>
 </div>
 
-<dialog id="tradeDlg">
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-    <strong>+ Add Trade</strong>
-    <button class="btn-o" style="padding:3px 8px;" onclick="document.getElementById('tradeDlg').close()">✕</button>
-  </div>
-  <form id="tForm">
-    <div class="g2" style="gap:8px;">
-      <div><small>SYMBOL</small><input type="text" id="tSym" placeholder="XAUUSD" required></div>
-      <div><small>DIRECTION</small><select id="tSide"><option value="Long">Long</option><option value="Short">Short</option></select></div>
-      <div><small>LOTS / QTY</small><input type="number" step="any" id="tLot" value="0.10" required></div>
-      <div><small>ENTRY PRICE</small><input type="number" step="any" id="tEnt" required></div>
-      <div><small>EXIT PRICE (Blank = Open)</small><input type="number" step="any" id="tExt"></div>
-      <div><small>ENTRY DATE</small><input type="date" id="tDat" required></div>
-      <div><small>MARKET</small><select id="tMkt"><option>Forex</option><option>Stocks</option><option>F&O</option><option>Crypto</option></select></div>
-      <div><small>EMOTION</small><select id="tEmo"><option>Disciplined</option><option>FOMO</option><option>Revenge</option><option>Hesitant</option></select></div>
+  <dialog id="tradeDlg">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <strong>➕ Add Trade & Journal Entry</strong>
+      <button type="button" class="btn-o" style="padding:3px 8px;" onclick="document.getElementById('tradeDlg').close()">✕</button>
     </div>
-    <small>NOTES</small><textarea id="tNot" rows="2" placeholder="Setup rationale & lessons..."></textarea>
-    <button type="submit" class="btn-g" style="width:100%; margin-top:12px;">Save Trade</button>
-  </form>
-</dialog>
+    <form id="tForm">
+      <div class="g2" style="gap:8px;">
+        <div><small>SYMBOL</small><input type="text" id="tSym" placeholder="XAUUSD" required></div>
+        <div><small>DIRECTION</small><select id="tSide"><option value="Long">Long</option><option value="Short">Short</option></select></div>
+        <div><small>LOTS / QTY</small><input type="number" step="any" id="tLot" value="0.10" required></div>
+        <div><small>ENTRY PRICE</small><input type="number" step="any" id="tEnt" required></div>
+        <div><small>STOP LOSS (SL)</small><input type="number" step="any" id="tSl" placeholder="e.g. 3560"></div>
+        <div><small>TAKE PROFIT (TP)</small><input type="number" step="any" id="tTp" placeholder="e.g. 3590"></div>
+        <div><small>EXIT PRICE (Blank = Open)</small><input type="number" step="any" id="tExt"></div>
+        <div>
+          <small>TRADE RESULT (WON / LOSS)</small>
+          <select id="tOutcome">
+            <option value="Auto">Auto (From Entry/Exit)</option>
+            <option value="Won">✅ Trade Won</option>
+            <option value="Loss">❌ Trade Loss</option>
+            <option value="Breakeven">⚖️ Breakeven</option>
+            <option value="Open">⏳ Running / Open</option>
+          </select>
+        </div>
+        <div><small>ENTRY DATE</small><input type="date" id="tDat" required></div>
+        <div><small>MARKET</small><select id="tMkt"><option>Forex</option><option>Metals</option><option>Crypto</option><option>Stocks</option><option>F&O</option></select></div>
+        <div><small>EMOTION</small><select id="tEmo"><option>Disciplined</option><option>Confident</option><option>FOMO</option><option>Revenge</option><option>Hesitant</option></select></div>
+      </div>
+      <small style="display:block; margin-top:8px;">JOURNAL NOTES & CONFLUENCE</small>
+      <textarea id="tNot" rows="3" placeholder="Setup rationale, SL/TP plan, execution & lessons..."></textarea>
+      <button type="submit" class="btn-g" style="width:100%; margin-top:12px;">💾 Save Trade & Journal</button>
+    </form>
+  </dialog>
 <script>
   function startClock() {
     var now = new Date();
@@ -2230,33 +2243,146 @@
     if (document.getElementById('tDat')) document.getElementById('tDat').valueAsDate = new Date();
   } catch (e) {}
 
-  var tForm = document.getElementById('tForm');
-  if (tForm) {
-    tForm.addEventListener('submit', function(e) {
-      e.preventDefault();
-      var side = document.getElementById('tSide').value;
-      var lot = parseFloat(document.getElementById('tLot').value) || 0.1;
-      var ent = parseFloat(document.getElementById('tEnt').value) || 0;
-      var extV = document.getElementById('tExt').value;
-      var open = extV === '';
-      var ext = open ? null : parseFloat(extV);
-      var pnl = open ? 0 : (side === 'Long' ? (ext - ent) * lot * 100 : (ent - ext) * lot * 100);
-      trades.unshift({
-        id: Date.now(),
-        sym: document.getElementById('tSym').value.toUpperCase(),
-        side: side, lot: lot, ent: ent, ext: ext, open: open, pnl: pnl,
-        dat: document.getElementById('tDat').value,
-        mkt: document.getElementById('tMkt') ? document.getElementById('tMkt').value : 'Forex',
-        emo: document.getElementById('tEmo') ? document.getElementById('tEmo').value : 'Disciplined',
-        not: document.getElementById('tNot') ? document.getElementById('tNot').value : ''
-      });
-      localStorage.setItem('p2p_fx_terminal_trades', JSON.stringify(trades));
-      tForm.reset();
-      document.getElementById('tradeDlg').close();
-      renderAll();
-    });
-  }
+   // === UPGRADED +ADD TRADE & 2-PANEL JOURNAL SYNC ===
+  (function wireEnhancedTradeAndJournal() {
+    var form = document.getElementById('tForm');
+    if (form) {
+      form.onsubmit = function(e) {
+        e.preventDefault();
+        var sym = (document.getElementById('tSym').value || 'XAUUSD').toUpperCase().trim();
+        var side = document.getElementById('tSide').value || 'Long';
+        var lot = parseFloat(document.getElementById('tLot').value) || 0.10;
+        var ent = parseFloat(document.getElementById('tEnt').value) || 0;
+        var sl = parseFloat(document.getElementById('tSl').value) || 0;
+        var tp = parseFloat(document.getElementById('tTp').value) || 0;
+        var extRaw = document.getElementById('tExt').value;
+        var ext = extRaw === '' ? 0 : (parseFloat(extRaw) || 0);
+        var outcome = document.getElementById('tOutcome').value || 'Auto';
+        var dat = document.getElementById('tDat').value || new Date().toISOString().slice(0, 10);
+        var mkt = document.getElementById('tMkt').value || 'Forex';
+        var emo = document.getElementById('tEmo').value || 'Disciplined';
+        var not = (document.getElementById('tNot').value || '').trim();
 
+        var mult = sym.indexOf('XAU') !== -1 ? 100 : (sym.indexOf('BTC') !== -1 ? 1 : (sym.indexOf('JPY') !== -1 ? 1000 : 100000));
+        var isOpen = outcome === 'Open' || (outcome === 'Auto' && extRaw === '');
+        var pnl = isOpen ? 0 : +(((side === 'Long' ? (ext - ent) : (ent - ext)) * lot * mult).toFixed(2));
+
+        if (outcome === 'Won' && pnl <= 0) pnl = Math.abs(pnl) || +(lot * 100).toFixed(2);
+        if (outcome === 'Loss' && pnl >= 0) pnl = -(Math.abs(pnl) || +(lot * 100).toFixed(2));
+        if (outcome === 'Breakeven') pnl = 0;
+
+        var finalStatus = isOpen ? 'Open' : (outcome === 'Auto' ? (pnl > 0 ? 'Won' : (pnl < 0 ? 'Loss' : 'Breakeven')) : outcome);
+
+        trades.unshift({
+          id: Date.now(),
+          sym: sym,
+          side: side,
+          lot: lot,
+          ent: ent,
+          sl: sl,
+          tp: tp,
+          ext: isOpen ? 0 : ext,
+          status: finalStatus,
+          open: isOpen,
+          pnl: pnl,
+          dat: dat,
+          mkt: mkt,
+          emo: emo,
+          not: not
+        });
+
+        localStorage.setItem('p2p_fx_terminal_trades', JSON.stringify(trades));
+        form.reset();
+        document.getElementById('tradeDlg').close();
+        renderAll();
+        renderEnhancedJournal(0);
+      };
+    }
+
+    window.renderEnhancedJournal = function(selectedIdx) {
+      var sideList = document.getElementById('jSideList');
+      var countTag = document.getElementById('jCountTag');
+      var searchInp = document.getElementById('jSearch');
+      if (!sideList || typeof trades === 'undefined' || !Array.isArray(trades)) return;
+
+      var q = searchInp ? searchInp.value.trim().toUpperCase() : '';
+      var filtered = new Array();
+      for (var i = 0; i < trades.length; i++) {
+        if (!q || (trades[i].sym && trades[i].sym.toUpperCase().indexOf(q) !== -1)) {
+          filtered.push({ idx: i, t: trades[i] });
+        }
+      }
+
+      if (countTag) countTag.textContent = trades.length + ' journaled';
+
+      if (!filtered.length) {
+        sideList.innerHTML = '<div style="color:var(--muted); font-size:0.84rem; text-align:center; padding:16px;">No trades found. Click + Add Trade to log your first trade.</div>';
+        return;
+      }
+
+      var activeIdx = selectedIdx !== undefined ? selectedIdx : filtered.at(0).idx;
+      var html = '';
+      for (var k = 0; k < filtered.length; k++) {
+        var item = filtered[k];
+        var t = item.t;
+        var st = t.status || (t.open ? 'Open' : (t.pnl > 0 ? 'Won' : (t.pnl < 0 ? 'Loss' : 'Breakeven')));
+        var badge = st === 'Won' ? 'tag-g' : (st === 'Loss' ? 'tag-r' : 'btn-o');
+        var isSel = item.idx === activeIdx;
+        html += '<div onclick="renderEnhancedJournal(' + item.idx + ')" style="cursor:pointer; padding:10px 12px; border-radius:8px; border:1px solid ' + (isSel ? 'var(--green)' : 'var(--border)') + '; background:' + (isSel ? 'rgba(0,255,136,0.08)' : 'var(--bg)') + ';">' +
+          '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+            '<strong>' + t.sym + ' <small style="color:var(--muted);">(' + t.side + ')</small></strong>' +
+            '<span class="' + badge + '" style="font-size:0.7rem;">' + st.toUpperCase() + '</span>' +
+          '</div>' +
+          '<div style="display:flex; justify-content:space-between; font-size:0.78rem; color:var(--muted); margin-top:4px;">' +
+            '<span>' + (t.dat || '') + ' • ' + t.lot + 'L</span>' +
+            '<strong class="' + (t.pnl >= 0 ? 'win' : 'loss') + '">' + (t.pnl >= 0 ? '+$' : '-$') + Math.abs(t.pnl || 0).toFixed(2) + '</strong>' +
+          '</div>' +
+        '</div>';
+      }
+      sideList.innerHTML = html;
+      openJournalDetailPane(activeIdx);
+    };
+
+    window.openJournalDetailPane = function(idx) {
+      var pane = document.getElementById('jDetailPane');
+      if (!pane || typeof trades === 'undefined' || !trades[idx]) return;
+      var t = trades[idx];
+      var st = t.status || (t.open ? 'Open' : (t.pnl > 0 ? 'Won' : (t.pnl < 0 ? 'Loss' : 'Breakeven')));
+      var badge = st === 'Won' ? 'tag-g' : (st === 'Loss' ? 'tag-r' : 'btn-o');
+
+      pane.innerHTML =
+        '<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:12px;">' +
+          '<div><strong style="font-size:1.1rem;">' + t.sym + ' • ' + t.side + ' (' + t.lot + ' Lots)</strong> <span class="' + badge + '" style="margin-left:8px;">' + st.toUpperCase() + '</span></div>' +
+          '<strong class="' + (t.pnl >= 0 ? 'win' : 'loss') + '" style="font-size:1.1rem;">' + (t.pnl >= 0 ? '+$' : '-$') + Math.abs(t.pnl || 0).toFixed(2) + '</strong>' +
+        '</div>' +
+        '<div class="g4" style="gap:8px; margin-bottom:12px;">' +
+          '<div class="mini"><small>ENTRY PRICE</small><strong>' + (t.ent || '—') + '</strong></div>' +
+          '<div class="mini"><small>STOP LOSS (SL)</small><strong class="loss">' + (t.sl || '—') + '</strong></div>' +
+          '<div class="mini"><small>TAKE PROFIT (TP)</small><strong class="win">' + (t.tp || '—') + '</strong></div>' +
+          '<div class="mini"><small>EXIT PRICE</small><strong>' + (t.open ? 'Open' : (t.ext || '—')) + '</strong></div>' +
+        '</div>' +
+        '<div style="display:flex; gap:12px; font-size:0.8rem; color:var(--muted); margin-bottom:10px;">' +
+          '<span>Date: <strong style="color:var(--text);">' + (t.dat || '—') + '</strong></span>' +
+          '<span>Market: <strong style="color:var(--text);">' + (t.mkt || 'Forex') + '</strong></span>' +
+          '<span>Mindset: <strong style="color:var(--text);">' + (t.emo || 'Disciplined') + '</strong></span>' +
+        '</div>' +
+        '<small>JOURNAL NOTES & TRADE REVIEW</small>' +
+        '<textarea id="jNoteEditor" rows="5" style="margin-top:6px; margin-bottom:10px;" placeholder="Write your setup confluence, SL/TP reasoning, and lessons learned...">' + (t.not || '') + '</textarea>' +
+        '<button type="button" class="btn-g" onclick="saveJournalNoteEntry(' + idx + ')">💾 Save Journal Notes</button>';
+    };
+
+    window.saveJournalNoteEntry = function(idx) {
+      if (!trades[idx]) return;
+      trades[idx].not = document.getElementById('jNoteEditor').value;
+      localStorage.setItem('p2p_fx_terminal_trades', JSON.stringify(trades));
+      renderAll();
+      renderEnhancedJournal(idx);
+    };
+
+    var jSearchInp = document.getElementById('jSearch');
+    if (jSearchInp) jSearchInp.onkeyup = function() { renderEnhancedJournal(); };
+  })();
+  
   function renderAll() {
     var closed = trades.filter(function(t) { return !t.open; });
     var open = trades.filter(function(t) { return t.open; });
