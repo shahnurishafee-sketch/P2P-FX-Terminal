@@ -73,6 +73,85 @@
     dialog { background: var(--card); color: var(--text); border: 1px solid var(--green); border-radius: 14px; padding: 20px; max-width: 500px; width: 92%; }
     dialog::backdrop { background: rgba(0,0,0,0.8); }
   </style>
+    /* === MOBILE & TABLET RESPONSIVE LAYOUT (<= 820px) === */
+  #mobMenuBtn { display: none; }
+  #mobOverlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0, 0, 0, 0.65); z-index: 98;
+  }
+  #mobOverlay.open { display: block; }
+
+  @media (max-width: 820px) {
+    body, .app, .layout, .shell {
+      display: block !important;
+      width: 100% !important;
+      overflow-x: hidden !important;
+    }
+
+    /* Slide-out Mobile Navigation Drawer */
+    aside, .sidebar {
+      position: fixed !important;
+      top: 0 !important;
+      left: -285px !important;
+      width: 265px !important;
+      min-width: 265px !important;
+      height: 100vh !important;
+      z-index: 99 !important;
+      overflow-y: auto !important;
+      transition: left 0.25s ease !important;
+      box-shadow: 6px 0 24px rgba(0, 0, 0, 0.7);
+    }
+    aside.mob-open, .sidebar.mob-open {
+      left: 0 !important;
+    }
+    #sbResizer { display: none !important; }
+
+    /* Mobile Top Header Bar */
+    #mobMenuBtn {
+      display: inline-flex !important;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 11px;
+      font-size: 1rem;
+      margin-right: 8px;
+    }
+
+    header, .topbar, main, .main, .content {
+      width: 100% !important;
+      max-width: 100% !important;
+      margin-left: 0 !important;
+      padding-left: 10px !important;
+      padding-right: 10px !important;
+    }
+
+    /* Stack Multi-Column Grids Cleanly on Mobile */
+    .g2, .g3, .g4 {
+      display: grid !important;
+      grid-template-columns: 1fr !important;
+      gap: 10px !important;
+    }
+    .g4 {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    /* Responsive Charts & Horizontal Table Scroll */
+    canvas#btCvs, canvas#dmCvs {
+      height: 290px !important;
+      touch-action: none;
+    }
+    table {
+      display: block;
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      white-space: nowrap;
+    }
+    dialog {
+      width: 94vw !important;
+      max-width: 94vw !important;
+      padding: 14px !important;
+    }
+  }
 </head>
 <body>
 <div class="app">
@@ -3963,6 +4042,66 @@ setTimeout(function() { renderAnalysisViews(); }, 400);
       document.body.style.cursor = '';
       if (typeof drawBt === 'function') drawBt();
       if (typeof drawDemoChart === 'function') drawDemoChart();
+    });
+  })();
+    // === MOBILE NAVIGATION DRAWER & TOUCH CHART SUPPORT ===
+  (function initMobileResponsiveness() {
+    var sb = document.querySelector('aside') || document.querySelector('.sidebar');
+    var topbar = document.querySelector('header') || document.querySelector('.topbar') || document.querySelector('main');
+    if (!sb || !topbar) return;
+
+    // 1. Create Backdrop Overlay & Mobile Menu Toggle Button
+    var overlay = document.createElement('div');
+    overlay.id = 'mobOverlay';
+    document.body.appendChild(overlay);
+
+    var menuBtn = document.createElement('button');
+    menuBtn.type = 'button';
+    menuBtn.id = 'mobMenuBtn';
+    menuBtn.className = 'btn-o';
+    menuBtn.textContent = '☰ Menu';
+    topbar.insertBefore(menuBtn, topbar.firstChild);
+
+    function closeMobDrawer() {
+      sb.classList.remove('mob-open');
+      overlay.classList.remove('open');
+    }
+
+    menuBtn.addEventListener('click', function() {
+      var isOpen = sb.classList.toggle('mob-open');
+      overlay.classList.toggle('open', isOpen);
+    });
+    overlay.addEventListener('click', closeMobDrawer);
+
+    // Auto-close mobile drawer when navigating to any section
+    var navBtns = sb.querySelectorAll('button.nav-btn, a');
+    for (var i = 0; i < navBtns.length; i++) {
+      if (navBtns[i].getAttribute('onclick') && navBtns[i].getAttribute('onclick').indexOf('toggleAnalysisMenu') !== -1) continue;
+      navBtns[i].addEventListener('click', function() {
+        if (window.innerWidth <= 820) closeMobDrawer();
+      });
+    }
+
+    // 2. Map Touch Events to Mouse Events on Backtesting & Demo Canvases for Mobile Pan/Zoom
+    ['btCvs', 'dmCvs'].forEach(function(id) {
+      var cvs = document.getElementById(id);
+      if (!cvs) return;
+      cvs.addEventListener('touchstart', function(e) {
+        if (e.touches.length === 1) {
+          var t = e.touches.at(0);
+          cvs.dispatchEvent(new MouseEvent('mousedown', { clientX: t.clientX, clientY: t.clientY, bubbles: true }));
+        }
+      }, { passive: true });
+      cvs.addEventListener('touchmove', function(e) {
+        if (e.touches.length === 1) {
+          e.preventDefault();
+          var t = e.touches.at(0);
+          cvs.dispatchEvent(new MouseEvent('mousemove', { clientX: t.clientX, clientY: t.clientY, bubbles: true }));
+        }
+      }, { passive: false });
+      cvs.addEventListener('touchend', function() {
+        window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+      }, { passive: true });
     });
   })();
 </script>
