@@ -3469,32 +3469,30 @@ setTimeout(function() { renderAnalysisViews(); }, 400);
     var grossL = Math.abs(lossesAll.reduce(function(s, t) { return s + (t.pnl || 0); }, 0));
     var netPnl = closedAll.reduce(function(s, t) { return s + (t.pnl || 0); }, 0);
     var pfVal = grossL > 0 ? (grossW / grossL).toFixed(2) : (grossW > 0 ? grossW.toFixed(2) : '0.00');
-    var bestVal = winsAll.length ? '+$' + Math.max.apply(null, winsAll.map(function(t) { return t.pnl; })).toFixed(2) : '$0.00';
-    var worstVal = lossesAll.length ? '-$' + Math.abs(Math.min.apply(null, lossesAll.map(function(t) { return t.pnl; }))).toFixed(2) : '$0.00';
-    var avgVal = closedAll.length ? ((netPnl >= 0 ? '+$' : '-$') + Math.abs(netPnl / closedAll.length).toFixed(2)) : '$0.00';
+       var avgWinVal = winsAll.length ? '+$' + (grossW / winsAll.length).toFixed(2) : '+$0.00';
+    var avgLossVal = lossesAll.length ? '-$' + (grossL / lossesAll.length).toFixed(2) : '-$0.00';
+    var bestVal = winsAll.length ? '+$' + Math.max.apply(null, winsAll.map(function(t) { return t.pnl; })).toFixed(2) : '+$0.00';
+    var worstVal = lossesAll.length ? '-$' + Math.abs(Math.min.apply(null, lossesAll.map(function(t) { return t.pnl; }))).toFixed(2) : '-$0.00';
 
     var qMap = {
-      'Profit Factor': pfVal,
-      'Best Trade': bestVal,
-      'Worst Trade': worstVal,
-      'Average Trade': avgVal,
-      'Expectancy': avgVal,
-      'Win Rate': (closedAll.length ? ((winsAll.length / closedAll.length) * 100).toFixed(1) : '0.0') + '%',
-      'Total Trades': String(closedAll.length),
-      'Winning Trades': String(winsAll.length),
-      'Losing Trades': String(lossesAll.length)
+      'AVG WIN': avgWinVal,
+      'AVG LOSS': avgLossVal,
+      'BEST TRADE': bestVal,
+      'WORST TRADE': worstVal,
+      'PROFIT FACTOR': pfVal,
+      'AVERAGE TRADE': avgVal,
+      'EXPECTANCY': avgVal
     };
 
     var rows = dashSec.querySelectorAll('tr, div');
     for (var r = 0; r < rows.length; r++) {
       var kids = Array.from(rows[r].children);
       if (kids.length !== 2) continue;
-      var kTxt = (kids.at(0).textContent || '').trim();
+      var kTxt = (kids[0].textContent || '').trim().toUpperCase();
       if (qMap[kTxt] !== undefined) {
-        kids.at(1).textContent = qMap[kTxt];
+        kids[1].textContent = qMap[kTxt];
       }
     }
-  }
 
   var prevRenderForDash = window.renderAll;
   window.renderAll = function() {
