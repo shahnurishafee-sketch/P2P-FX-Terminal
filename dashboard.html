@@ -3306,7 +3306,7 @@ if (typeof prevRenderAllForAnalysis === 'function') prevRenderAllForAnalysis();
 renderAnalysisViews();
 };
 setTimeout(function() { renderAnalysisViews(); }, 400);
-    // === DASHBOARD EQUITY CURVE / BAR GRAPH TOGGLE + QUICK STATS SYNC ===
+      // === DASHBOARD EQUITY CURVE / BAR GRAPH TOGGLE + QUICK STATS SYNC ===
   var dashChartMode = 'curve'; // 'curve' | 'bar'
 
   function setDashChartMode(mode) {
@@ -3319,7 +3319,7 @@ setTimeout(function() { renderAnalysisViews(); }, 400);
   }
 
   function renderDashboardCurveAndStats() {
-    var dashSec = document.getElementById('v-dash') || document.getElementById('v-dashboard');
+    var dashSec = document.getElementById('v-dash') || document.getElementById('v-dashboard') || document.querySelector('.view');
     if (!dashSec) return;
 
     var liveTrades = (typeof trades !== 'undefined' && Array.isArray(trades) && trades.length)
@@ -3348,7 +3348,7 @@ setTimeout(function() { renderAnalysisViews(); }, 400);
         hdr.appendChild(wrap);
       }
 
-      // 2. Draw Cumulative Equity Curve or Daily P&L Bar Graph on the Dashboard Canvas
+      // 2. Draw Cumulative Equity Curve or Daily P&L Bar Graph
       var cvs = perfCard.querySelector('canvas');
       if (cvs) {
         if (!cvs.width || cvs.width < 300) cvs.width = 920;
@@ -3366,7 +3366,7 @@ setTimeout(function() { renderAnalysisViews(); }, 400);
           ctx.font = '13px sans-serif';
           ctx.fillText('Log or close your first trade to view your live Equity Curve & P&L Bar Graph.', padL, cvs.height / 2);
         } else {
-          var pts = new Array();
+          var pts = [];
           var cum = 0;
           if (dashChartMode === 'curve') pts.push({ lbl: 'Start', val: 0, pnl: 0 });
           for (var cIdx = 0; cIdx < closed.length; cIdx++) {
@@ -3387,7 +3387,6 @@ setTimeout(function() { renderAnalysisViews(); }, 400);
 
           function vToY(v) { return padT + ((maxV - v) / (maxV - minV)) * plotH; }
 
-          // Horizontal Grid & Y-Axis Labels
           ctx.strokeStyle = '#13221c';
           ctx.lineWidth = 1;
           ctx.font = '11px monospace';
@@ -3399,18 +3398,16 @@ setTimeout(function() { renderAnalysisViews(); }, 400);
             ctx.fillText((gv >= 0 ? '+$' : '-$') + Math.abs(gv).toFixed(0), 6, gy + 4);
           }
 
-          // Zero Baseline
           var zeroY = vToY(0);
           ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
-          ctx.setLineDash(new Array(4, 4));
+          ctx.setLineDash([4, 4]);
           ctx.beginPath(); ctx.moveTo(padL, zeroY); ctx.lineTo(cvs.width - padR, zeroY); ctx.stroke();
-          ctx.setLineDash(new Array());
+          ctx.setLineDash([]);
 
           if (dashChartMode === 'curve') {
             var stepX = plotW / Math.max(1, pts.length - 1);
             var lineCol = cum >= 0 ? '#00ff88' : '#ff2a5f';
 
-            // Area Fill
             ctx.beginPath();
             for (var k = 0; k < pts.length; k++) {
               var kx = padL + k * stepX;
@@ -3423,7 +3420,6 @@ setTimeout(function() { renderAnalysisViews(); }, 400);
             ctx.fillStyle = cum >= 0 ? 'rgba(0, 255, 136, 0.14)' : 'rgba(255, 42, 95, 0.14)';
             ctx.fill();
 
-            // Curve Line & Dots
             ctx.strokeStyle = lineCol;
             ctx.lineWidth = 2.4;
             ctx.beginPath();
@@ -3443,7 +3439,6 @@ setTimeout(function() { renderAnalysisViews(); }, 400);
               ctx.fillText(pts[d].lbl, dx - 14, cvs.height - 8);
             }
           } else {
-            // Bar Graph Mode
             var slotW = plotW / pts.length;
             var barW = Math.min(44, slotW * 0.58);
             for (var b = 0; b < pts.length; b++) {
@@ -3469,10 +3464,11 @@ setTimeout(function() { renderAnalysisViews(); }, 400);
     var grossL = Math.abs(lossesAll.reduce(function(s, t) { return s + (t.pnl || 0); }, 0));
     var netPnl = closedAll.reduce(function(s, t) { return s + (t.pnl || 0); }, 0);
     var pfVal = grossL > 0 ? (grossW / grossL).toFixed(2) : (grossW > 0 ? grossW.toFixed(2) : '0.00');
-       var avgWinVal = winsAll.length ? '+$' + (grossW / winsAll.length).toFixed(2) : '+$0.00';
+    var avgWinVal = winsAll.length ? '+$' + (grossW / winsAll.length).toFixed(2) : '+$0.00';
     var avgLossVal = lossesAll.length ? '-$' + (grossL / lossesAll.length).toFixed(2) : '-$0.00';
     var bestVal = winsAll.length ? '+$' + Math.max.apply(null, winsAll.map(function(t) { return t.pnl; })).toFixed(2) : '+$0.00';
     var worstVal = lossesAll.length ? '-$' + Math.abs(Math.min.apply(null, lossesAll.map(function(t) { return t.pnl; }))).toFixed(2) : '-$0.00';
+    var avgVal = closedAll.length ? ((netPnl >= 0 ? '+$' : '-$') + Math.abs(netPnl / closedAll.length).toFixed(2)) : '$0.00';
 
     var qMap = {
       'AVG WIN': avgWinVal,
@@ -3486,13 +3482,14 @@ setTimeout(function() { renderAnalysisViews(); }, 400);
 
     var rows = dashSec.querySelectorAll('tr, div');
     for (var r = 0; r < rows.length; r++) {
-      var kids = Array.from(rows[r].children);
+      var kids = rows[r].children;
       if (kids.length !== 2) continue;
       var kTxt = (kids[0].textContent || '').trim().toUpperCase();
       if (qMap[kTxt] !== undefined) {
         kids[1].textContent = qMap[kTxt];
       }
     }
+  }
 
   var prevRenderForDash = window.renderAll;
   window.renderAll = function() {
