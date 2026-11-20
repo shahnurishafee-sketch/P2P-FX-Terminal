@@ -3160,8 +3160,25 @@ renderAll();
   }
 
   function renderAnalysisViews(selectedIdx) {
-    if (typeof trades === 'undefined' || !Array.isArray(trades)) return;
-
+       var liveTrades = (typeof trades !== 'undefined' && Array.isArray(trades) && trades.length)
+      ? trades
+      : (JSON.parse(localStorage.getItem('p2p_fx_terminal_trades') || 'null')
+        || JSON.parse(localStorage.getItem('trades') || 'null')
+        || JSON.parse(localStorage.getItem('p2p_trades') || 'null')
+        || []);
+    if (!liveTrades.length) {
+      for (var lsIdx = 0; lsIdx < localStorage.length; lsIdx++) {
+        var kName = localStorage.key(lsIdx);
+        if (kName && kName.toLowerCase().indexOf('trade') !== -1) {
+          try {
+            var parsed = JSON.parse(localStorage.getItem(kName));
+            if (Array.isArray(parsed) && parsed.length) { liveTrades = parsed; break; }
+          } catch (e) {}
+        }
+      }
+    }
+    if (typeof trades === 'undefined' || !Array.isArray(trades)) window.trades = liveTrades;
+    else if (!trades.length && liveTrades.length) trades = liveTrades;
     // 1. Update Performance Page (#v-perf) Metrics
     var closed = trades.filter(function(t) { return !t.open; });
     var wins = closed.filter(function(t) { return (t.pnl || 0) > 0; });
@@ -3274,7 +3291,7 @@ window.renderAll = function() {
 if (typeof prevRenderAllForAnalysis === 'function') prevRenderAllForAnalysis();
 renderAnalysisViews();
 };
-renderAnalysisViews();
+setTimeout(function() { renderAnalysisViews(); }, 400);
 </script>
 </body>
 </html>
