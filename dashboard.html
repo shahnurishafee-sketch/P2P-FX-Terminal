@@ -1834,8 +1834,8 @@ drawBt();
     if (document.getElementById('dmTicketAsk')) document.getElementById('dmTicketAsk').textContent = p.ask.toFixed(p.dec);
   }
 
-    async function syncRealDemoPrices() {
-    // 1. Live Crypto Prices (Binance Direct + Coinbase Automatic Fallback for India ISPs)
+      async function syncRealDemoPrices() {
+    // 1. Live Crypto Prices (Binance Direct + Coinbase Fallback)
     var cryptoLoaded = false;
     try {
       var res = await fetch('https://binance.com');
@@ -1872,7 +1872,7 @@ drawBt();
       }));
     }
 
-    // 2. Live Spot Gold (XAUUSD) — Direct CORS-Enabled Feed (No Proxy Needed)
+    // 2. Live Spot Gold (XAUUSD)
     try {
       var gRes = await fetch('https://gold-api.com');
       if (gRes.ok) {
@@ -1886,7 +1886,7 @@ drawBt();
       }
     } catch (e) {}
 
-    // 3. Live Spot Forex Rates — Direct CORS-Enabled Interbank Feed (No Proxy Needed)
+    // 3. Live Spot Forex Rates
     try {
       var fxRes = await fetch('https://er-api.com');
       if (fxRes.ok) {
@@ -2073,59 +2073,67 @@ updateActiveDemoChartCandle();
 renderDemoMarketWatch();
 renderDemoTerminal();
 }
-function renderDemoTerminal() {
-var badge = document.getElementById('demoAccBadge');
-var wrap = document.getElementById('demoTerminalWrap');
-if (!demoState) {
-if (badge) { badge.textContent = 'No Active Demo Account'; badge.className = 'tag-r'; }
-if (wrap) wrap.style.display = 'none';
-return;
-}
-if (badge) {
-badge.textContent = '● ' + demoState.name + ' (' + demoState.id + ')';
-badge.className = 'tag-g';
-}
-if (wrap) wrap.style.display = 'block';
-var totalFloat = 0;
-var usedMargin = 0;
-var openRows = '';
-for (var i = 0; i < demoState.positions.length; i++) {
-var pos = demoState.positions[i];
-var p = demoPairs[pos.sym] || { bid: pos.entry, ask: pos.entry, dec: 2, mult: 100 };
-var curr = pos.side === 'BUY' ? p.bid : p.ask;
-var diff = pos.side === 'BUY' ? (curr - pos.entry) : (pos.entry - curr);
-var pnl = +(diff * pos.lots * p.mult).toFixed(2);
-totalFloat += pnl;
-usedMargin += (pos.lots * 100000) / (demoState.leverage || 500);
-var slTxt = pos.sl !== null ? pos.sl.toFixed(p.dec) : '—';
-var tpTxt = pos.tp !== null ? pos.tp.toFixed(p.dec) : '—';
-openRows += '' +
-'' + pos.ticket + '' +
-'' + pos.sym + '' +
-'' + pos.side + '' +
-'' + pos.lots + '' +
-'' + pos.entry.toFixed(p.dec) + '' +
-'' + curr.toFixed(p.dec) + '' +
-'' + slTxt + ' / ' + tpTxt + '' +
-'' + (pnl >= 0 ? '+$' : '-$') + Math.abs(pnl).toFixed(2) + '' +
-'Close' +
-'';
-}
-var equity = +(demoState.balance + totalFloat).toFixed(2);
-var freeMargin = Math.max(0, +(equity - usedMargin).toFixed(2));
-if (document.getElementById('dmBal')) document.getElementById('dmBal').textContent = '$' + demoState.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-if (document.getElementById('dmEq')) document.getElementById('dmEq').textContent = '$' + equity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-if (document.getElementById('dmFloat')) {
-document.getElementById('dmFloat').textContent = (totalFloat >= 0 ? '+$' : '-$') + Math.abs(totalFloat).toFixed(2);
-document.getElementById('dmFloat').className = totalFloat >= 0 ? 'win' : 'loss';
-}
-if (document.getElementById('dmMargin')) document.getElementById('dmMargin').textContent = '$' + freeMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' (1:' + demoState.leverage + ')';
-if (document.getElementById('dmOpenCount')) document.getElementById('dmOpenCount').textContent = demoState.positions.length;
-var openBody = document.getElementById('dmOpenBody');
-if (openBody) {
-openBody.innerHTML = openRows || 'No open demo positions. Click BUY or SELL above to open a live demo trade.';
-}
-}
+  function renderDemoTerminal() {
+    var badge = document.getElementById('demoAccBadge');
+    var wrap = document.getElementById('demoTerminalWrap');
+    if (!demoState) {
+      if (badge) { badge.textContent = 'No Active Demo Account'; badge.className = 'tag-r'; }
+      if (wrap) wrap.style.display = 'none';
+      return;
+    }
+
+    if (badge) {
+      badge.textContent = '● ' + demoState.name + ' (' + demoState.id + ')';
+      badge.className = 'tag-g';
+    }
+    if (wrap) wrap.style.display = 'block';
+
+    var totalFloat = 0;
+    var usedMargin = 0;
+    var openRows = '';
+
+    for (var i = 0; i < demoState.positions.length; i++) {
+      var pos = demoState.positions[i];
+      var p = demoPairs[pos.sym] || { bid: pos.entry, ask: pos.entry, dec: 2, mult: 100 };
+      var curr = pos.side === 'BUY' ? p.bid : p.ask;
+      var diff = pos.side === 'BUY' ? (curr - pos.entry) : (pos.entry - curr);
+      var pnl = +(diff * pos.lots * p.mult).toFixed(2);
+      totalFloat += pnl;
+      usedMargin += (pos.lots * 100000) / (demoState.leverage || 500);
+
+      var slTxt = pos.sl !== null ? pos.sl.toFixed(p.dec) : '—';
+      var tpTxt = pos.tp !== null ? pos.tp.toFixed(p.dec) : '—';
+
+      openRows += '<tr>' +
+        '<td><small>' + pos.ticket + '</small></td>' +
+        '<td><strong>' + pos.sym + '</strong></td>' +
+        '<td><span class="' + (pos.side === 'BUY' ? 'tag-g' : 'tag-r') + '">' + pos.side + '</span></td>' +
+        '<td>' + pos.lots + '</td>' +
+        '<td>' + pos.entry.toFixed(p.dec) + '</td>' +
+        '<td>' + curr.toFixed(p.dec) + '</td>' +
+        '<td>' + slTxt + ' / ' + tpTxt + '</td>' +
+        '<td class="' + (pnl >= 0 ? 'win' : 'loss') + '">' + (pnl >= 0 ? '+$' : '-$') + Math.abs(pnl).toFixed(2) + '</td>' +
+        '<td><button type="button" class="btn-r" style="padding:3px 8px; font-size:0.72rem;" onclick="closeDemoPosition(\'' + pos.ticket + '\', \'Manual Close\')">Close</button></td>' +
+      '</tr>';
+    }
+
+    var equity = +(demoState.balance + totalFloat).toFixed(2);
+    var freeMargin = Math.max(0, +(equity - usedMargin).toFixed(2));
+
+    if (document.getElementById('dmBal')) document.getElementById('dmBal').textContent = '$' + demoState.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (document.getElementById('dmEq')) document.getElementById('dmEq').textContent = '$' + equity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (document.getElementById('dmFloat')) {
+      document.getElementById('dmFloat').textContent = (totalFloat >= 0 ? '+$' : '-$') + Math.abs(totalFloat).toFixed(2);
+      document.getElementById('dmFloat').className = totalFloat >= 0 ? 'win' : 'loss';
+    }
+    if (document.getElementById('dmMargin')) document.getElementById('dmMargin').textContent = '$' + freeMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' (1:' + demoState.leverage + ')';
+    if (document.getElementById('dmOpenCount')) document.getElementById('dmOpenCount').textContent = demoState.positions.length;
+
+    var openBody = document.getElementById('dmOpenBody');
+    if (openBody) {
+      openBody.innerHTML = openRows || '<tr><td colspan="9" style="text-align:center; color:var(--muted); padding:14px;">No open demo positions. Click BUY or SELL above to open a live demo trade.</td></tr>';
+    }
+  }
 // Initialize Demo Terminal & Start Real-Time Market Sync (Every 2s)
 syncRealDemoPrices().then(function() {
 renderDemoMarketWatch();
@@ -2678,7 +2686,7 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
     }
 
     var run = 0;
-    var pts = new Array(0);
+    var pts = [];
     filtered.slice().reverse().forEach(function(t) { run += t.pnl; pts.push(run); });
     var min = Math.min.apply(null, pts) - 10;
     var max = Math.max.apply(null, pts) + 10;
@@ -2881,37 +2889,6 @@ renderAll();
   }
   updateClock();
   setInterval(updateClock, 1000);
-
-  function go(id, btn) {
-    var views = document.querySelectorAll('.view');
-    for (var i = 0; i < views.length; i++) views[i].classList.remove('active');
-    var target = document.getElementById('v-' + id);
-    if (target) target.classList.add('active');
-    if (btn) {
-      var btns = document.querySelectorAll('.nav-btn');
-      for (var j = 0; j < btns.length; j++) btns[j].classList.remove('active');
-      btn.classList.add('active');
-    }
-    var titleEl = document.getElementById('viewTitle');
-    if (titleEl) titleEl.innerText = id.toUpperCase();
-        if (id === 'market' && !window.tvCalLoaded) {
-      window.tvCalLoaded = true;
-      var s = document.createElement('script');
-      s.src = 'https://tradingview.com';
-      s.async = true;
-      s.text = JSON.stringify({
-        colorTheme: 'dark',
-        isTransparent: true,
-        width: '100%',
-        height: 600,
-        locale: 'en',
-        importanceFilter: '-1,0,1',
-        countryFilter: 'us,eu,gb,jp,au,ca,nz,ch,in'
-      });
-      document.getElementById('tvCalBox').appendChild(s);
-    }
-
-  }
 
   function logout() {
     localStorage.removeItem('p2p_fx_session');
@@ -3121,7 +3098,7 @@ renderAll();
     dmSecLeft = dmTfSecs[dmTf] || 60;
 
     // 1. Load Real Crypto Candles from Binance (with Coinbase Exchange Fallback)
-    if (p.binance) {
+        if (p.binance) {
       try {
         var bMap = { '1m': '1m', '3m': '3m', '5m': '5m', '15m': '15m', '30m': '30m', '1H': '1h', '4H': '4h', '1D': '1d' };
         var url = 'https://binance.com' + p.binance + '&interval=' + (bMap[dmTf] || '1m') + '&limit=220';
@@ -3146,33 +3123,7 @@ renderAll();
           p.ask = +(p.bid + Math.max(sp, p.step * 0.2)).toFixed(p.dec);
         }
       } catch (e) {}
-
-      // Fallback to Coinbase Exchange Candles if Binance is unreachable
-      if (!dmAllBars.length) {
-        try {
-          var cbPair = demoSelectedPair.replace('USD', '-USD');
-          var granMap = { '1m': 60, '3m': 300, '5m': 300, '15m': 900, '30m': 900, '1H': 3600, '4H': 21600, '1D': 86400 };
-          var cbRes = await fetch('https://coinbase.com' + cbPair + '/candles?granularity=' + (granMap[dmTf] || 300));
-          var cbArr = await cbRes.json();
-          if (Array.isArray(cbArr) && cbArr.length > 10) {
-            cbArr.reverse();
-            for (var cIdx = 0; cIdx < cbArr.length; cIdx++) {
-              var ck = cbArr[cIdx];
-              var cdt = new Date(ck[0] * 1000);
-              dmAllBars.push({
-                o: +parseFloat(ck[3]).toFixed(p.dec),
-                h: +parseFloat(ck[2]).toFixed(p.dec),
-                l: +parseFloat(ck[1]).toFixed(p.dec),
-                c: +parseFloat(ck[4]).toFixed(p.dec),
-                v: Math.round(parseFloat(ck[5])) || 100,
-                t: cdt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })
-              });
-            }
-          }
-        } catch (e) {}
-      }
     }
-
     // 2. Build Historical Context Anchored Exactly to Live Spot Gold / Forex Price
     if (!dmAllBars.length) {
       await syncRealDemoPrices();
