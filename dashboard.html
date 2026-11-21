@@ -2402,7 +2402,7 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
               <div style="background:var(--card); border:1px solid var(--border); border-radius:8px; padding:10px; text-align:center;">
                 <span class="tag-g" style="margin-bottom:6px; display:inline-block;">USDT • TRC20 (TRON)</span>
                 <div style="background:#fff; padding:6px; border-radius:8px; width:136px; height:136px; margin:6px auto;">
-                  <img id="qrTrcImg" src="https://qrserver.com" alt="USDT TRC20 QR" style="width:124px; height:124px; display:block;">
+                  <canvas id="qrTrcCvs" width="124" height="124" style="display:block;"></canvas>
                 </div>
                 <code id="payTrcText" style="font-size:0.74rem; word-break:break-all; display:block; margin:6px 0;">TBzNDEXWkvxL2fyYSRiUnJC4fGSbBumJVW</code>
                 <button type="button" class="btn-o" style="padding:4px 10px; font-size:0.72rem;" onclick="copyPayText('payTrcText', this)">Copy TRC20 Address</button>
@@ -2413,7 +2413,7 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
               <div style="background:var(--card); border:1px solid var(--border); border-radius:8px; padding:10px; text-align:center;">
                 <span class="tag-g" style="margin-bottom:6px; display:inline-block;">USDT • BEP20 (BSC)</span>
                 <div style="background:#fff; padding:6px; border-radius:8px; width:136px; height:136px; margin:6px auto;">
-                  <img id="qrBepImg" src="https://qrserver.com" alt="USDT BEP20 QR" style="width:124px; height:124px; display:block;">
+                  <canvas id="qrBepCvs" width="124" height="124" style="display:block;"></canvas>
                 </div>
                 <code id="payBepText" style="font-size:0.74rem; word-break:break-all; display:block; margin:6px 0;">0xC8220608ABB260DcB10B4CB84F6C7fc3Eb2087CB</code>
                 <button type="button" class="btn-o" style="padding:4px 10px; font-size:0.72rem;" onclick="copyPayText('payBepText', this)">Copy BEP20 Address</button>
@@ -4899,6 +4899,35 @@ ctx.fillText('⏰ ALERT ' + al.price + ' (' + al.note + ')', sc.padL + 8, ay - 4
 
   bindFullTouchGestures('btCvs', 'bt');
   bindFullTouchGestures('dmCvs', 'dm');
+})();
+</script>
+  <script src="https://cloudflare.com"></script>
+<script>
+(function renderAllPaymentQRs() {
+  function mountQR(canvasId, text) {
+    var oldCvs = document.getElementById(canvasId);
+    if (!oldCvs || !oldCvs.parentNode) return;
+    var box = oldCvs.parentNode;
+    box.innerHTML = '';
+    if (typeof QRCode !== 'undefined') {
+      new QRCode(box, {
+        text: text,
+        width: 124,
+        height: 124,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    } else {
+      var img = document.createElement('img');
+      img.style.cssText = 'width:124px;height:124px;display:block;';
+      img.src = 'https://quickchart.io' + encodeURIComponent(text);
+      box.appendChild(img);
+    }
+  }
+
+  mountQR('qrTrcCvs', 'TBzNDEXWkvxL2fyYSRiUnJC4fGSbBumJVW');
+  mountQR('qrBepCvs', '0xC8220608ABB260DcB10B4CB84F6C7fc3Eb2087CB');
 })();
 </script>
 </body>
