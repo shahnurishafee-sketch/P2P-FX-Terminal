@@ -1835,47 +1835,88 @@ drawBt();
   }
 
   async function syncRealDemoPrices() {
+    // 1. Live Crypto Prices (Binance Direct + Coinbase Fallback)
+    var cryptoOk = false;
     try {
       var res = await fetch('https://binance.com');
-      var list = await res.json();
-      if (Array.isArray(list)) {
-        var map = {};
-        for (var i = 0; i < list.length; i++) map[list[i].symbol] = list[i];
-        var keys = Object.keys(demoPairs);
-        for (var k = 0; k < keys.length; k++) {
-          var sym = keys[k];
-          var cfg = demoPairs[sym];
-          if (cfg.binance && map[cfg.binance]) {
-            cfg.bid = +parseFloat(map[cfg.binance].bidPrice).toFixed(cfg.dec);
-            cfg.ask = +parseFloat(map[cfg.binance].askPrice).toFixed(cfg.dec);
-          }
+      if (res.ok) {
+        var list = await res.json();
+        if (Array.isArray(list)) {
+          var map = {};
+          for (var i = 0; i < list.length; i++) map[list[i].symbol] = list[i];
+          Object.keys(demoPairs).forEach(function(sym) {
+            var cfg = demoPairs[sym];
+            if (cfg.binance && map[cfg.binance]) {
+              cfg.bid = +parseFloat(map[cfg.binance].bidPrice).toFixed(cfg.dec);
+              cfg.ask = +parseFloat(map[cfg.binance].askPrice).toFixed(cfg.dec);
+            }
+          });
+          cryptoOk = true;
         }
       }
     } catch (e) {}
 
-    var fxKeys = Object.keys(demoPairs).filter(function(s) { return demoPairs[s].yahoo; });
-    await Promise.all(fxKeys.map(async function(sym) {
-      var cfg = demoPairs[sym];
-      try {
-        var yUrl = 'https://yahoo.com' + encodeURIComponent(cfg.yahoo) + '?range=1d&interval=1m';
-        var proxyUrl = 'https://corsproxy.io?' + encodeURIComponent(yUrl);
-        var yRes = await fetch(proxyUrl);
-        var yJson = await yRes.json();
-        var meta = yJson.chart && yJson.chart.result && yJson.chart.result.meta;
-        if (meta && meta.regularMarketPrice) {
-          var liveP = +parseFloat(meta.regularMarketPrice).toFixed(cfg.dec);
-          var spread = +(cfg.step * 0.8).toFixed(cfg.dec);
-          cfg.bid = liveP;
-          cfg.ask = +(liveP + spread).toFixed(cfg.dec);
+    if (!cryptoOk) {
+      var cbMap = { BTCUSD: 'BTC-USD', ETHUSD: 'ETH-USD', SOLUSD: 'SOL-USD', XRPUSD: 'XRP-USD' };
+      await Promise.all(Object.keys(cbMap).map(async function(sym) {
+        try {
+          var cfg = demoPairs[sym];
+          var cbRes = await fetch('https://coinbase.com' + cbMap[sym] + '/spot');
+          var cbJson = await cbRes.json();
+          if (cbJson && cbJson.data && cbJson.data.amount) {
+            var p = +parseFloat(cbJson.data.amount).toFixed(cfg.dec);
+            cfg.bid = p;
+            cfg.ask = +(p + cfg.step * 0.6).toFixed(cfg.dec);
+          }
+        } catch (e) {}
+      }));
+    }
+
+    // 2. Live Spot Gold (XAUUSD) — Direct CORS-Enabled API
+    try {
+      var gRes = await fetch('https://gold-api.com');
+      if (gRes.ok) {
+        var gJson = await gRes.json();
+        if (gJson && gJson.price) {
+          var xauCfg = demoPairs.XAUUSD;
+          var xauP = +parseFloat(gJson.price).toFixed(xauCfg.dec);
+          xauCfg.bid = xauP;
+          xauCfg.ask = +(xauP + 0.35).toFixed(xauCfg.dec);
         }
-      } catch (e) {}
-    }));
+      }
+    } catch (e) {}
 
-    updateMarketStatusBadge();
+    // 3. Live Spot Forex Rates — Direct CORS-Enabled API
+    try {
+      var fxRes = await fetch('https://er-api.com');
+      if (fxRes.ok) {
+        var fxJson = await fxRes.json();
+        var r = fxJson && fxJson.rates;
+        if (r) {
+          var fxQuotes = {
+            EURUSD: r.EUR ? (1 / r.EUR) : null,
+            GBPUSD: r.GBP ? (1 / r.GBP) : null,
+            AUDUSD: r.AUD ? (1 / r.AUD) : null,
+            USDJPY: r.JPY || null,
+            USDCAD: r.CAD || null,
+            GBPJPY: (r.GBP && r.JPY) ? (r.JPY / r.GBP) : null
+          };
+          Object.keys(fxQuotes).forEach(function(sym) {
+            var val = fxQuotes[sym];
+            var cfg = demoPairs[sym];
+            if (val && cfg) {
+              var bidP = +val.toFixed(cfg.dec);
+              cfg.bid = bidP;
+              cfg.ask = +(bidP + cfg.step * 0.8).toFixed(cfg.dec);
+            }
+          });
+        }
+      }
+    } catch (e) {}
+
     renderDemoMarketWatch();
-    updateActiveDemoChartCandle();
+    renderDemoTerminal();
   }
-
   function renderDemoMarketWatch() {
     var body = document.getElementById('dmWatchBody');
     if (!body) return;
