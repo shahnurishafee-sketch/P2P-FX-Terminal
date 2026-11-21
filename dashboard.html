@@ -4347,6 +4347,373 @@ setTimeout(function() { renderAnalysisViews(); }, 400);
     });
   })();
 </script>
+  <!-- === UNIFIED TRADINGVIEW PRO SUITE (FLOATING TOOLBAR, R:R SETTINGS, ALERTS, SCISSOR REPLAY & SINGLE DELETE) === -->
+<style>
+  .tv-float-bar {
+    position: fixed; z-index: 120; display: none; align-items: center; gap: 6px;
+    background: var(--card); border: 1px solid var(--green); border-radius: 10px;
+    padding: 6px 10px; box-shadow: 0 10px 28px rgba(0,0,0,0.65); flex-wrap: wrap;
+  }
+  .tv-float-bar.show { display: flex; }
+  .tv-swatch {
+    width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid #fff;
+    cursor: pointer; padding: 0; display: inline-block;
+  }
+  .tv-fbtn {
+    background: var(--bg); color: var(--text); border: 1px solid var(--border);
+    border-radius: 6px; padding: 4px 8px; font-size: 0.74rem; font-weight: 700; cursor: pointer;
+  }
+  .tv-fbtn:hover { border-color: var(--green); color: var(--green); }
+  .tv-fbtn.del { border-color: var(--red); color: var(--red); }
+  .tv-fbtn.del:hover { background: var(--red); color: #fff; }
+</style>
+
+<!-- Floating TradingView Selection Toolbar -->
+<div id="tvFloatBar" class="tv-float-bar">
+  <span style="color:var(--muted); font-size:0.75rem; cursor:grab;">⋮⋮</span>
+  <button type="button" class="tv-swatch" style="background:#00ff88;" onclick="tvSetColor('#00ff88')" title="Green"></button>
+  <button type="button" class="tv-swatch" style="background:#ff2a5f;" onclick="tvSetColor('#ff2a5f')" title="Red"></button>
+  <button type="button" class="tv-swatch" style="background:#38bdf8;" onclick="tvSetColor('#38bdf8')" title="Blue"></button>
+  <button type="button" class="tv-swatch" style="background:#f59e0b;" onclick="tvSetColor('#f59e0b')" title="Gold"></button>
+  <button type="button" class="tv-swatch" style="background:#a855f7;" onclick="tvSetColor('#a855f7')" title="Purple"></button>
+  <button type="button" class="tv-swatch" style="background:#f8fafc;" onclick="tvSetColor('#f8fafc')" title="White"></button>
+  <button type="button" class="tv-fbtn" onclick="tvCycleWidth()">— <span id="tvWidthLbl">2px</span></button>
+  <button type="button" class="tv-fbtn" onclick="tvToggleDash()">┄ Style</button>
+  <button type="button" class="tv-fbtn" onclick="tvOpenPosSettings()" title="Position / Drawing Inputs">⚙ Settings</button>
+  <button type="button" class="tv-fbtn" onclick="tvCloneSelected()" title="Clone Drawing">⧉ Clone</button>
+  <button type="button" class="tv-fbtn" onclick="tvToggleLock()" title="Lock / Unlock"><span id="tvLockLbl">🔓</span></button>
+  <button type="button" class="tv-fbtn del" onclick="tvDeleteSelected()" title="Delete Selected Drawing">🗑 Delete</button>
+  <button type="button" class="tv-fbtn" onclick="tvHideFloatBar()">✕</button>
+</div>
+
+<!-- TradingView Position Inputs Modal (Account Size, Lot Size, Risk %, Entry, SL, TP) -->
+<dialog id="tvPosDlg">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+    <strong id="tvPosDlgTitle">📐 Position & Drawing Inputs</strong>
+    <button type="button" class="btn-o" style="padding:3px 8px;" onclick="document.getElementById('tvPosDlg').close()">✕</button>
+  </div>
+  <div class="g2" style="gap:10px; margin-bottom:12px;">
+    <div><small>ACCOUNT SIZE ($)</small><input type="number" id="tvInpAcc" value="10000"></div>
+    <div><small>LOT SIZE</small><input type="number" id="tvInpLot" step="0.01" value="0.10"></div>
+    <div><small>RISK (%)</small><input type="number" id="tvInpRisk" step="0.1" value="1.0"></div>
+    <div><small>ENTRY PRICE</small><input type="number" id="tvInpEnt" step="any"></div>
+    <div><small>PROFIT TARGET PRICE</small><input type="number" id="tvInpTp" step="any"></div>
+    <div><small>STOP LOSS PRICE</small><input type="number" id="tvInpSl" step="any"></div>
+  </div>
+  <div style="display:flex; justify-content:flex-end; gap:8px;">
+    <button type="button" class="btn-o" onclick="document.getElementById('tvPosDlg').close()">Cancel</button>
+    <button type="button" class="btn-g" onclick="tvSavePosSettings()">Ok</button>
+  </div>
+</dialog>
+
+<!-- TradingView Price Alert Modal -->
+<dialog id="tvAlertDlg">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+    <strong>⏰ Create Price Alert</strong>
+    <button type="button" class="btn-o" style="padding:3px 8px;" onclick="document.getElementById('tvAlertDlg').close()">✕</button>
+  </div>
+  <div style="margin-bottom:10px;">
+    <small>TARGET ALERT PRICE</small>
+    <input type="number" id="tvAlertPrice" step="any" placeholder="Enter exact price...">
+  </div>
+  <div style="margin-bottom:12px;">
+    <small>ALERT NOTE</small>
+    <input type="text" id="tvAlertNote" placeholder="e.g. Breakout above London High">
+  </div>
+  <button type="button" class="btn-g" style="width:100%;" onclick="tvCreateAlert()">⏰ Set Live Alert</button>
+</dialog>
+
+<script>
+(function initTradingViewProSuite() {
+  var tvActiveCtx = null; // { mode: 'bt' | 'dm', idx: number }
+  var tvAlerts = JSON.parse(localStorage.getItem('p2p_fx_tv_alerts') || '[]');
+  var tvMagnet = false;
+  var btScissorMode = false;
+  var dmScissorMode = false;
+  var dmFullBackup = null;
+
+  // 1. Inject Extra TradingView Buttons into Both Toolbars (Eraser, Magnet, Alert, Scissor Replay)
+  function injectProControls() {
+    var btBar = document.getElementById('btToolBar');
+    if (btBar && !document.getElementById('btScissorBtn')) {
+      btBar.insertAdjacentHTML('beforeend',
+        '<button type="button" id="btEraserBtn" class="btn-o" style="padding:3px 8px; font-size:0.73rem;" onclick="setBtTool(\'eraser\', this)">🧹 Eraser</button>' +
+        '<button type="button" id="btMagBtn" class="btn-o" style="padding:3px 8px; font-size:0.73rem;" onclick="tvToggleMagnet()">🧲 Magnet</button>' +
+        '<button type="button" class="btn-o" style="padding:3px 8px; font-size:0.73rem;" onclick="tvOpenAlertModal(\'bt\')">⏰ Alert</button>' +
+        '<button type="button" id="btScissorBtn" class="btn-o" style="padding:3px 8px; font-size:0.73rem; border-color:#38bdf8; color:#38bdf8;" onclick="tvToggleScissor(\'bt\')">✂️ Select Bar</button>'
+      );
+    }
+
+    var dmBar = document.getElementById('dmToolBar');
+    if (dmBar && !document.getElementById('dmScissorBtn')) {
+      dmBar.insertAdjacentHTML('beforeend',
+        '<button type="button" id="dmEraserBtn" class="btn-o" style="padding:3px 8px; font-size:0.72rem;" onclick="setDemoTool(\'eraser\', this)">🧹 Eraser</button>' +
+        '<button type="button" id="dmMagBtn" class="btn-o" style="padding:3px 8px; font-size:0.72rem;" onclick="tvToggleMagnet()">🧲 Magnet</button>' +
+        '<button type="button" class="btn-o" style="padding:3px 8px; font-size:0.72rem;" onclick="tvOpenAlertModal(\'dm\')">⏰ Alert</button>' +
+        '<button type="button" id="dmScissorBtn" class="btn-o" style="padding:3px 8px; font-size:0.72rem; border-color:#38bdf8; color:#38bdf8;" onclick="tvToggleScissor(\'dm\')">✂️ Replay Cut</button>' +
+        '<button type="button" id="dmStepBtn" class="btn-g" style="display:none; padding:3px 8px; font-size:0.72rem;" onclick="tvStepDemoReplay()">⏭ +1 Bar</button>'
+      );
+    }
+  }
+  injectProControls();
+
+  window.tvToggleMagnet = function() {
+    tvMagnet = !tvMagnet;
+    ['btMagBtn', 'dmMagBtn'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.className = tvMagnet ? 'btn-g' : 'btn-o';
+    });
+  };
+
+  window.tvToggleScissor = function(mode) {
+    if (mode === 'bt') {
+      btScissorMode = !btScissorMode;
+      var btn = document.getElementById('btScissorBtn');
+      if (btn) btn.className = btScissorMode ? 'btn-g' : 'btn-o';
+      var hint = document.getElementById('btToolHint');
+      if (hint) hint.textContent = btScissorMode ? '✂️ Click any candle on the chart to slice replay to that exact bar!' : 'Scissor replay off.';
+    } else {
+      dmScissorMode = !dmScissorMode;
+      var dBtn = document.getElementById('dmScissorBtn');
+      if (dBtn) dBtn.className = dmScissorMode ? 'btn-g' : 'btn-o';
+      var dHint = document.getElementById('dmToolHint');
+      if (dHint) dHint.textContent = dmScissorMode ? '✂️ Click any candle on the Demo chart to cut & replay bar-by-bar!' : 'Drag right price bar or bottom time bar to zoom';
+    }
+  };
+
+  window.tvStepDemoReplay = function() {
+    if (!dmFullBackup || !dmAllBars) return;
+    if (dmAllBars.length < dmFullBackup.length) {
+      dmAllBars.push(dmFullBackup[dmAllBars.length]);
+      sliceDemoVisibleBars();
+      drawDemoChart();
+    } else {
+      alert('Reached latest live candle!');
+      var stepBtn = document.getElementById('dmStepBtn');
+      if (stepBtn) stepBtn.style.display = 'none';
+    }
+  };
+
+  // 2. Floating Selection Toolbar Controls (Color, Width, Dash, Settings, Clone, Lock, Single Delete)
+  function getActiveArray() {
+    if (!tvActiveCtx) return null;
+    return tvActiveCtx.mode === 'bt' ? btDrawings : dmDrawings;
+  }
+  function redrawActive() {
+    if (!tvActiveCtx) return;
+    if (tvActiveCtx.mode === 'bt' && typeof drawBt === 'function') drawBt();
+    if (tvActiveCtx.mode === 'dm' && typeof drawDemoChart === 'function') drawDemoChart();
+  }
+
+  window.tvShowFloatBar = function(mode, idx, clientX, clientY) {
+    var arr = mode === 'bt' ? btDrawings : dmDrawings;
+    if (!arr || !arr[idx]) return;
+    tvActiveCtx = { mode: mode, idx: idx };
+    var dr = arr[idx];
+    var bar = document.getElementById('tvFloatBar');
+    if (!bar) return;
+    document.getElementById('tvWidthLbl').textContent = (dr.width || 2) + 'px';
+    document.getElementById('tvLockLbl').textContent = dr.locked ? '🔒' : '🔓';
+    bar.style.left = Math.max(12, Math.min(window.innerWidth - 420, clientX - 120)) + 'px';
+    bar.style.top = Math.max(64, clientY - 58) + 'px';
+    bar.classList.add('show');
+  };
+
+  window.tvHideFloatBar = function() {
+    var bar = document.getElementById('tvFloatBar');
+    if (bar) bar.classList.remove('show');
+    tvActiveCtx = null;
+  };
+
+  window.tvSetColor = function(col) {
+    var arr = getActiveArray();
+if (!arr || !arr[tvActiveCtx.idx]) return;
+arr[tvActiveCtx.idx].color = col;
+redrawActive();
+};
+window.tvCycleWidth = function() {
+var arr = getActiveArray();
+if (!arr || !arr[tvActiveCtx.idx]) return;
+var cur = arr[tvActiveCtx.idx].width || 2;
+var next = cur === 1 ? 2 : (cur === 2 ? 4 : 1);
+arr[tvActiveCtx.idx].width = next;
+document.getElementById('tvWidthLbl').textContent = next + 'px';
+redrawActive();
+};
+window.tvToggleDash = function() {
+var arr = getActiveArray();
+if (!arr || !arr[tvActiveCtx.idx]) return;
+arr[tvActiveCtx.idx].dashed = !arr[tvActiveCtx.idx].dashed;
+redrawActive();
+};
+window.tvToggleLock = function() {
+var arr = getActiveArray();
+if (!arr || !arr[tvActiveCtx.idx]) return;
+arr[tvActiveCtx.idx].locked = !arr[tvActiveCtx.idx].locked;
+document.getElementById('tvLockLbl').textContent = arr[tvActiveCtx.idx].locked ? '🔒' : '🔓';
+redrawActive();
+};
+window.tvCloneSelected = function() {
+var arr = getActiveArray();
+if (!arr || !arr[tvActiveCtx.idx]) return;
+var copy = Object.assign({}, arr[tvActiveCtx.idx]);
+copy.i1 = (copy.i1 || 0) + 2;
+if (copy.i2 !== undefined) copy.i2 += 2;
+arr.push(copy);
+tvActiveCtx.idx = arr.length - 1;
+redrawActive();
+};
+window.tvDeleteSelected = function() {
+var arr = getActiveArray();
+if (!arr || !tvActiveCtx || !arr[tvActiveCtx.idx]) return;
+arr.splice(tvActiveCtx.idx, 1);
+tvHideFloatBar();
+if (tvActiveCtx && tvActiveCtx.mode === 'bt' && typeof drawBt === 'function') drawBt();
+if (typeof drawBt === 'function') drawBt();
+if (typeof drawDemoChart === 'function') drawDemoChart();
+};
+// Keyboard Delete / Backspace shortcut to remove selected drawing
+window.addEventListener('keydown', function(e) {
+if ((e.key === 'Delete' || e.key === 'Backspace') && tvActiveCtx && document.activeElement.tagName !== 'INPUT' && document.activeElement.tagName !== 'TEXTAREA') {
+e.preventDefault();
+tvDeleteSelected();
+}
+});
+// 3. Position Settings Modal (Long / Short R:R Inputs)
+window.tvOpenPosSettings = function() {
+var arr = getActiveArray();
+if (!arr || !arr[tvActiveCtx.idx]) return;
+var dr = arr[tvActiveCtx.idx];
+document.getElementById('tvInpAcc').value = dr.accSize || 10000;
+document.getElementById('tvInpLot').value = dr.lots || 0.10;
+document.getElementById('tvInpRisk').value = dr.riskPct || 1.0;
+document.getElementById('tvInpEnt').value = dr.p1;
+document.getElementById('tvInpTp').value = dr.p2 !== undefined ? dr.p2 : dr.p1;
+document.getElementById('tvInpSl').value = dr.slPrice !== undefined ? dr.slPrice : (dr.p1 - ((dr.p2 || dr.p1) - dr.p1) * 0.5);
+document.getElementById('tvPosDlg').showModal();
+};
+window.tvSavePosSettings = function() {
+var arr = getActiveArray();
+if (!arr || !arr[tvActiveCtx.idx]) return;
+var dr = arr[tvActiveCtx.idx];
+dr.accSize = parseFloat(document.getElementById('tvInpAcc').value) || 10000;
+dr.lots = parseFloat(document.getElementById('tvInpLot').value) || 0.10;
+dr.riskPct = parseFloat(document.getElementById('tvInpRisk').value) || 1.0;
+dr.p1 = parseFloat(document.getElementById('tvInpEnt').value) || dr.p1;
+dr.p2 = parseFloat(document.getElementById('tvInpTp').value) || dr.p2;
+dr.slPrice = parseFloat(document.getElementById('tvInpSl').value);
+document.getElementById('tvPosDlg').close();
+redrawActive();
+};
+// 4. Price Alert System
+var alertTargetMode = 'dm';
+window.tvOpenAlertModal = function(mode) {
+alertTargetMode = mode;
+var curPrice = mode === 'bt'
+? (btBars.length ? btBars[btBars.length - 1].c : 0)
+: (demoPairs[demoSelectedPair] ? demoPairs[demoSelectedPair].bid : 0);
+document.getElementById('tvAlertPrice').value = curPrice;
+document.getElementById('tvAlertDlg').showModal();
+};
+window.tvCreateAlert = function() {
+var price = parseFloat(document.getElementById('tvAlertPrice').value);
+var note = (document.getElementById('tvAlertNote').value || 'Price Alert').trim();
+if (isNaN(price)) return;
+var sym = alertTargetMode === 'bt' ? document.getElementById('btSym').value : demoSelectedPair;
+tvAlerts.push({ id: Date.now(), sym: sym, price: price, note: note, triggered: false });
+localStorage.setItem('p2p_fx_tv_alerts', JSON.stringify(tvAlerts));
+document.getElementById('tvAlertDlg').close();
+if (typeof drawBt === 'function') drawBt();
+if (typeof drawDemoChart === 'function') drawDemoChart();
+};
+// 5. Hook Canvas Clicks for Selection Toolbar, Eraser, Magnet Snap & Scissor Replay
+function attachProCanvasHooks(canvasId, mode) {
+var c = document.getElementById(canvasId);
+if (!c) return;
+c.addEventListener('mousedown', function(e) {
+var rect = c.getBoundingClientRect();
+var pt = { x: (e.clientX - rect.left) * (c.width / rect.width), y: (e.clientY - rect.top) * (c.height / rect.height) };
+var sc = mode === 'bt' ? getBtScale(c) : getDmScale(c);
+var arr = mode === 'bt' ? btDrawings : dmDrawings;
+// A. Scissor Bar Replay Cut
+if ((mode === 'bt' && btScissorMode) || (mode === 'dm' && dmScissorMode)) {
+var cutIdx = sc.xToIdx(pt.x);
+if (mode === 'bt') {
+var globalIdx = Math.max(45, (btReplayIdx - btBars.length + 1) + cutIdx);
+var sl = document.getElementById('btReplaySlider');
+if (sl) sl.value = globalIdx;
+jumpBtReplay(globalIdx);
+tvToggleScissor('bt');
+} else {
+if (!dmFullBackup) dmFullBackup = dmAllBars.slice();
+var endCut = Math.max(12, (dmAllBars.length - dmBars.length) + cutIdx + 1);
+dmAllBars = dmFullBackup.slice(0, endCut);
+sliceDemoVisibleBars();
+drawDemoChart();
+tvToggleScissor('dm');
+var stepBtn = document.getElementById('dmStepBtn');
+if (stepBtn) stepBtn.style.display = 'inline-block';
+}
+return;
+}
+// B. Hit-Test Existing Drawing for Floating Toolbar or Eraser
+var hit = mode === 'bt' ? hitTestBtDrawing(pt, sc) : hitTestDemoDrawing(pt, sc);
+if (hit) {
+var curTool = mode === 'bt' ? btTool : dmTool;
+if (curTool === 'eraser') {
+arr.splice(hit.idx, 1);
+tvHideFloatBar();
+if (mode === 'bt') drawBt(); else drawDemoChart();
+return;
+}
+tvShowFloatBar(mode, hit.idx, e.clientX, e.clientY);
+} else {
+tvHideFloatBar();
+}
+}, true);
+}
+attachProCanvasHooks('btCvs', 'bt');
+attachProCanvasHooks('dmCvs', 'dm');
+// 6. Render Price Alert Lines & Detailed TradingView R:R Callouts on Both Canvases
+var origDrawBt = window.drawBt;
+window.drawBt = function() {
+if (origDrawBt) origDrawBt();
+var c = document.getElementById('btCvs');
+if (!c || !btBars.length) return;
+var ctx = c.getContext('2d');
+var sc = getBtScale(c);
+var sym = document.getElementById('btSym') ? document.getElementById('btSym').value : 'XAUUSD';
+tvAlerts.forEach(function(al) {
+if (al.sym !== sym) return;
+var ay = sc.priceToY(al.price);
+ctx.strokeStyle = '#f59e0b';
+ctx.setLineDash([4, 4]);
+ctx.beginPath(); ctx.moveTo(sc.padL, ay); ctx.lineTo(c.width - sc.padR, ay); ctx.stroke();
+ctx.setLineDash([]);
+ctx.fillStyle = '#f59e0b';
+ctx.fillText('⏰ ALERT ' + al.price + ' (' + al.note + ')', sc.padL + 8, ay - 4);
+});
+};
+var origDrawDm = window.drawDemoChart;
+window.drawDemoChart = function() {
+if (origDrawDm) origDrawDm();
+var c = document.getElementById('dmCvs');
+if (!c || !dmBars.length) return;
+var ctx = c.getContext('2d');
+var sc = getDmScale(c);
+tvAlerts.forEach(function(al) {
+if (al.sym !== demoSelectedPair) return;
+var ay = sc.pToY(al.price);
+ctx.strokeStyle = '#f59e0b';
+ctx.setLineDash([4, 4]);
+ctx.beginPath(); ctx.moveTo(sc.padL, ay); ctx.lineTo(c.width - sc.padR, ay); ctx.stroke();
+ctx.setLineDash([]);
+ctx.fillStyle = '#f59e0b';
+ctx.fillText('⏰ ALERT ' + al.price + ' (' + al.note + ')', sc.padL + 8, ay - 4);
+});
+};
+})();
+</script>
 </body>
 </html>
 
