@@ -4714,6 +4714,175 @@ ctx.fillText('⏰ ALERT ' + al.price + ' (' + al.note + ')', sc.padL + 8, ay - 4
 };
 })();
 </script>
+  <!-- === MOBILE & TABLET TOUCH ZOOM, PINCH & RESPONSIVE TOOLBAR ENGINE === -->
+<style>
+  @media (max-width: 900px) {
+    #btCvs, #dmCvs {
+      height: 330px !important;
+      touch-action: none !important;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    #btToolBar, #dmToolBar {
+      flex-wrap: nowrap !important;
+      overflow-x: auto !important;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 8px !important;
+    }
+    #btToolBar button, #dmToolBar button {
+      flex: 0 0 auto !important;
+      padding: 6px 10px !important;
+      font-size: 0.78rem !important;
+    }
+    .tv-float-bar {
+      left: 3vw !important;
+      right: 3vw !important;
+      width: 94vw !important;
+      justify-content: center;
+      padding: 8px !important;
+      gap: 6px !important;
+    }
+    .tv-fbtn {
+      padding: 6px 9px !important;
+      font-size: 0.78rem !important;
+    }
+  }
+</style>
+
+<script>
+(function initMobileTouchChartSuite() {
+  // 1. Add Thumb-Friendly Mobile Zoom (+ / - / Reset) Buttons to Both Toolbars
+  function addTouchZoomControls() {
+    var btBar = document.getElementById('btToolBar');
+    if (btBar && !document.getElementById('btMobZoomIn')) {
+      btBar.insertAdjacentHTML('afterbegin',
+        '<button type="button" id="btMobZoomIn" class="btn-o" style="padding:4px 9px;" onclick="btZoomStep(-6, 1.15)" title="Zoom In">➕</button>' +
+        '<button type="button" id="btMobZoomOut" class="btn-o" style="padding:4px 9px;" onclick="btZoomStep(6, 0.87)" title="Zoom Out">➖</button>'
+      );
+    }
+
+    var dmBar = document.getElementById('dmToolBar');
+    if (dmBar && !document.getElementById('dmMobZoomIn')) {
+      dmBar.insertAdjacentHTML('afterbegin',
+        '<button type="button" id="dmMobZoomIn" class="btn-o" style="padding:4px 9px;" onclick="dmZoomStep(-6, 1.15)" title="Zoom In">➕</button>' +
+        '<button type="button" id="dmMobZoomOut" class="btn-o" style="padding:4px 9px;" onclick="dmZoomStep(6, 0.87)" title="Zoom Out">➖</button>'
+      );
+    }
+  }
+  addTouchZoomControls();
+
+  window.btZoomStep = function(barDelta, yFactor) {
+    if (typeof btVisibleCount !== 'undefined') {
+      btVisibleCount = Math.max(14, Math.min(180, btVisibleCount + barDelta));
+      if (typeof jumpBtReplay === 'function') jumpBtReplay(btReplayIdx);
+    }
+  };
+
+  window.dmZoomStep = function(barDelta, yFactor) {
+    if (typeof dmVisCount !== 'undefined') {
+      dmVisCount = Math.max(14, Math.min(180, dmVisCount + barDelta));
+      if (typeof sliceDemoVisibleBars === 'function') sliceDemoVisibleBars();
+      if (typeof drawDemoChart === 'function') drawDemoChart();
+    }
+  };
+
+  // 2. Native Two-Finger Pinch-to-Zoom + Single-Finger Touch Translation for Both Canvases
+  function bindFullTouchGestures(canvasId, mode) {
+    var c = document.getElementById(canvasId);
+    if (!c) return;
+
+    var pinchStartDist = 0;
+    var pinchStartVis = 48;
+    var pinchStartYZoom = 1.0;
+    var isPinching = false;
+
+    function getTouchDist(t1, t2) {
+      return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+    }
+
+    function dispatchMouseSim(type, touch) {
+      var ev = new MouseEvent(type, {
+        bubbles: true,
+        cancelable: true,
+        view: window,
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        button: 0
+      });
+      c.dispatchEvent(ev);
+    }
+
+    c.addEventListener('touchstart', function(e) {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        isPinching = true;
+        pinchStartDist = getTouchDist(e.touches[0], e.touches[1]) || 1;
+        if (mode === 'bt') {
+          pinchStartVis = typeof btVisibleCount !== 'undefined' ? btVisibleCount : 48;
+          pinchStartYZoom = typeof btYZoom !== 'undefined' ? btYZoom : 1.0;
+        } else {
+          pinchStartVis = typeof dmVisCount !== 'undefined' ? dmVisCount : 52;
+          pinchStartYZoom = typeof dmYZoom !== 'undefined' ? dmYZoom : 1.0;
+        }
+      } else if (e.touches.length === 1) {
+        e.preventDefault();
+        isPinching = false;
+        dispatchMouseSim('mousedown', e.touches[0]);
+      }
+    }, { passive: false });
+
+    c.addEventListener('touchmove', function(e) {
+      if (e.touches.length === 2 && isPinching) {
+        e.preventDefault();
+        var curDist = getTouchDist(e.touches[0], e.touches[1]);
+        var scale = curDist / pinchStartDist; // > 1 = zoom in (fewer bars), < 1 = zoom out (more bars)
+        var newBars = Math.max(14, Math.min(180, Math.round(pinchStartVis / scale)));
+
+        // Also detect vertical vs horizontal pinch spread for Y-axis zoom
+        var dy = Math.abs(e.touches[0].clientY - e.touches[1].clientY);
+        var dx = Math.abs(e.touches[0].clientX - e.touches[1].clientX);
+
+        if (mode === 'bt') {
+          if (dy > dx * 1.4) {
+            btYZoom = Math.max(0.25, Math.min(5.0, pinchStartYZoom * scale));
+            if (typeof drawBt === 'function') drawBt();
+          } else {
+            btVisibleCount = newBars;
+            if (typeof jumpBtReplay === 'function') jumpBtReplay(btReplayIdx);
+          }
+        } else {
+          if (dy > dx * 1.4) {
+            dmYZoom = Math.max(0.25, Math.min(5.0, pinchStartYZoom * scale));
+            if (typeof drawDemoChart === 'function') drawDemoChart();
+          } else {
+            dmVisCount = newBars;
+            if (typeof sliceDemoVisibleBars === 'function') sliceDemoVisibleBars();
+            if (typeof drawDemoChart === 'function') drawDemoChart();
+          }
+        }
+      } else if (e.touches.length === 1 && !isPinching) {
+        e.preventDefault();
+        dispatchMouseSim('mousemove', e.touches[0]);
+      }
+    }, { passive: false });
+
+    c.addEventListener('touchend', function(e) {
+      if (isPinching && e.touches.length < 2) {
+        isPinching = false;
+        return;
+      }
+      if (e.changedTouches.length === 1) {
+        var t = e.changedTouches[0];
+        dispatchMouseSim('mouseup', t);
+        dispatchMouseSim('click', t);
+      }
+    }, { passive: false });
+  }
+
+  bindFullTouchGestures('btCvs', 'bt');
+  bindFullTouchGestures('dmCvs', 'dm');
+})();
+</script>
 </body>
 </html>
 
