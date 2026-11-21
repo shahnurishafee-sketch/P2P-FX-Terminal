@@ -439,15 +439,36 @@
           </div>
         </div>
         <!-- Row 2: Charting Tools & BUY/SELL Execution -->
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px; background:var(--bg); padding:7px 10px; border-radius:8px; border:1px solid var(--border);">
-          <div id="btToolBar" style="display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
-            <button type="button" class="btn-g" style="padding:4px 8px; font-size:0.74rem;" onclick="setBtTool('cross', this)">✛ Crosshair</button>
-            <button type="button" class="btn-o" style="padding:4px 8px; font-size:0.74rem;" onclick="setBtTool('hline', this)">— H-Line</button>
-            <button type="button" class="btn-o" style="padding:4px 8px; font-size:0.74rem;" onclick="setBtTool('trend', this)">╱ Trendline</button>
-            <button type="button" class="btn-o" style="padding:4px 8px; font-size:0.74rem;" onclick="setBtTool('fib', this)">📐 Fib Retracement</button>
-            <button type="button" class="btn-o" style="padding:4px 8px; font-size:0.74rem;" onclick="setBtTool('vp', this)">📊 Fixed Vol Profile</button>
-            <button type="button" id="emaBtn" class="btn-g" style="padding:4px 8px; font-size:0.74rem;" onclick="toggleEma()">EMA 20/50</button>
-            <button type="button" class="btn-o" style="padding:4px 8px; font-size:0.74rem;" onclick="clearBtDrawings()">🗑 Clear</button>
+                 <!-- Backtesting Chart Style, Indicators & Auto Scale -->
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
+            <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
+              <select id="btChartType" onchange="drawBt()" style="width:auto; margin:0; padding:4px 8px; font-size:0.74rem; font-weight:700;">
+                <option value="candles">🕯️ Candles</option>
+                <option value="hollow">▯ Hollow Candles</option>
+                <option value="line">📈 Line</option>
+                <option value="area">⛰️ Area</option>
+              </select>
+              <button type="button" id="btIndEma" class="btn-g" style="padding:3px 8px; font-size:0.72rem;" onclick="toggleBtInd('ema', this)">EMA 20/50</button>
+              <button type="button" id="btIndBb" class="btn-o" style="padding:3px 8px; font-size:0.72rem;" onclick="toggleBtInd('bb', this)">Bollinger</button>
+              <button type="button" id="btIndVol" class="btn-g" style="padding:3px 8px; font-size:0.72rem;" onclick="toggleBtInd('vol', this)">Volume</button>
+              <button type="button" id="btIndRsi" class="btn-g" style="padding:3px 8px; font-size:0.72rem;" onclick="toggleBtInd('rsi', this)">RSI (14)</button>
+              <button type="button" class="btn-o" style="padding:3px 8px; font-size:0.72rem;" onclick="resetBtZoom()">⟲ Auto</button>
+            </div>
+            <span id="btToolHint" style="font-size:0.74rem; color:var(--green);">Drag any drawing handle to move/extend • Drag axes to zoom</span>
+          </div>
+
+          <!-- Backtesting Full TradingView Drawing & R:R Toolbar -->
+          <div id="btToolBar" style="display:flex; gap:4px; align-items:center; flex-wrap:wrap; background:var(--bg); padding:6px 8px; border-radius:8px; border:1px solid var(--border); margin-bottom:8px;">
+            <button type="button" class="btn-g" style="padding:3px 8px; font-size:0.72rem;" onclick="setBtTool('cross', this)">✛ Crosshair</button>
+            <button type="button" class="btn-o" style="padding:3px 8px; font-size:0.72rem;" onclick="setBtTool('trend', this)">╱ Trendline</button>
+            <button type="button" class="btn-o" style="padding:3px 8px; font-size:0.72rem;" onclick="setBtTool('hline', this)">— H-Line</button>
+            <button type="button" class="btn-o" style="padding:3px 8px; font-size:0.72rem;" onclick="setBtTool('vline', this)">│ V-Line</button>
+            <button type="button" class="btn-o" style="padding:3px 8px; font-size:0.72rem;" onclick="setBtTool('rect', this)">▭ Zone Box</button>
+            <button type="button" class="btn-o" style="padding:3px 8px; font-size:0.72rem;" onclick="setBtTool('fib', this)">📐 Fib Retracement</button>
+            <button type="button" class="btn-o" style="padding:3px 8px; font-size:0.72rem;" onclick="setBtTool('long', this)">🟢 Long R:R</button>
+            <button type="button" class="btn-o" style="padding:3px 8px; font-size:0.72rem;" onclick="setBtTool('short', this)">🔴 Short R:R</button>
+            <button type="button" class="btn-o" style="padding:3px 8px; font-size:0.72rem;" onclick="setBtTool('measure', this)">📏 Ruler</button>
+            <button type="button" class="btn-o" style="padding:3px 8px; font-size:0.72rem;" onclick="clearBtDrawings()">🗑 Clear</button>
           </div>
 
           <div style="display:flex; gap:5px; align-items:center; flex-wrap:wrap;">
