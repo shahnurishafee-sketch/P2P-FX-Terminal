@@ -4087,24 +4087,49 @@ setTimeout(function() { renderAnalysisViews(); }, 400);
     ['btCvs', 'dmCvs'].forEach(function(id) {
       var cvs = document.getElementById(id);
       if (!cvs) return;
+      var lastPinchDist = 0;
+
+      function getPinchDist(t1, t2) {
+        return Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      }
+
       cvs.addEventListener('touchstart', function(e) {
-        if (e.touches.length === 1) {
-          var t = e.touches.at(0);
+        if (e.touches.length === 2) {
+          e.preventDefault();
+          lastPinchDist = getPinchDist(e.touches[0], e.touches[1]);
+          window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+        } else if (e.touches.length === 1) {
+          var t = e.touches[0];
           cvs.dispatchEvent(new MouseEvent('mousedown', { clientX: t.clientX, clientY: t.clientY, bubbles: true }));
         }
-      }, { passive: true });
+      }, { passive: false });
+
       cvs.addEventListener('touchmove', function(e) {
-        if (e.touches.length === 1) {
+        if (e.touches.length === 2) {
           e.preventDefault();
-          var t = e.touches.at(0);
+          var t1 = e.touches[0], t2 = e.touches[1];
+          var newDist = getPinchDist(t1, t2);
+          if (lastPinchDist > 0 && Math.abs(newDist - lastPinchDist) > 3) {
+            var midX = (t1.clientX + t2.clientX) / 2;
+            var midY = (t1.clientY + t2.clientY) / 2;
+            var deltaY = newDist > lastPinchDist ? -60 : 60;
+            cvs.dispatchEvent(new WheelEvent('wheel', {
+              clientX: midX, clientY: midY, deltaY: deltaY, bubbles: true, cancelable: true
+            }));
+            lastPinchDist = newDist;
+          }
+        } else if (e.touches.length === 1) {
+          e.preventDefault();
+          var t = e.touches[0];
           cvs.dispatchEvent(new MouseEvent('mousemove', { clientX: t.clientX, clientY: t.clientY, bubbles: true }));
         }
       }, { passive: false });
-      cvs.addEventListener('touchend', function() {
-        window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+
+      cvs.addEventListener('touchend', function(e) {
+        if (e.touches.length < 2) lastPinchDist = 0;
+        if (e.touches.length === 0) window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
       }, { passive: true });
     });
-  })();
 </script>
 </body>
 </html>
