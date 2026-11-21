@@ -1753,24 +1753,35 @@ drawBt();
       </div>
     </section>
     <script>
-  // === COMMUNITY DEMO ACCOUNT ENGINE ($1,000 TO $1,000,000) ===
+   // === COMMUNITY DEMO ACCOUNT ENGINE (REAL LIVE PRICES + WEEKEND MARKET HOURS) ===
   var demoPairs = {
-    XAUUSD: { cat: 'Metals', bid: 3724.50, ask: 3724.90, dec: 2, mult: 100,    step: 0.45, binance: 'PAXGUSDT' },
-    EURUSD: { cat: 'Forex',  bid: 1.09680, ask: 1.09692, dec: 5, mult: 100000, step: 0.00012, binance: 'EURUSDT' },
-    GBPUSD: { cat: 'Forex',  bid: 1.31480, ask: 1.31495, dec: 5, mult: 100000, step: 0.00015, binance: 'GBPUSDT' },
-    USDJPY: { cat: 'Forex',  bid: 154.620, ask: 154.638, dec: 3, mult: 1000,   step: 0.018 },
-    GBPJPY: { cat: 'Forex',  bid: 203.310, ask: 203.335, dec: 3, mult: 1000,   step: 0.025 },
-    AUDUSD: { cat: 'Forex',  bid: 0.65120, ask: 0.65134, dec: 5, mult: 100000, step: 0.00011 },
-    USDCAD: { cat: 'Forex',  bid: 1.39810, ask: 1.39826, dec: 5, mult: 100000, step: 0.00013 },
-    BTCUSD: { cat: 'Crypto', bid: 62610.0, ask: 62635.0, dec: 1, mult: 1,      step: 22.0, binance: 'BTCUSDT' },
-    ETHUSD: { cat: 'Crypto', bid: 2418.50, ask: 2420.10, dec: 2, mult: 10,     step: 1.80, binance: 'ETHUSDT' },
-    SOLUSD: { cat: 'Crypto', bid: 148.20,  ask: 148.35,  dec: 2, mult: 100,    step: 0.16, binance: 'SOLUSDT' },
-    XRPUSD: { cat: 'Crypto', bid: 0.6180,  ask: 0.6186,  dec: 4, mult: 10000,  step: 0.0007, binance: 'XRPUSDT' }
+    XAUUSD: { cat: 'Metals', bid: 2648.50, ask: 2648.90, dec: 2, mult: 100,    step: 0.40, yahoo: 'GC=F' },
+    EURUSD: { cat: 'Forex',  bid: 1.09680, ask: 1.09692, dec: 5, mult: 100000, step: 0.00012, yahoo: 'EURUSD=X' },
+    GBPUSD: { cat: 'Forex',  bid: 1.31480, ask: 1.31495, dec: 5, mult: 100000, step: 0.00015, yahoo: 'GBPUSD=X' },
+    USDJPY: { cat: 'Forex',  bid: 154.620, ask: 154.638, dec: 3, mult: 1000,   step: 0.018,   yahoo: 'USDJPY=X' },
+    GBPJPY: { cat: 'Forex',  bid: 203.310, ask: 203.335, dec: 3, mult: 1000,   step: 0.025,   yahoo: 'GBPJPY=X' },
+    AUDUSD: { cat: 'Forex',  bid: 0.65120, ask: 0.65134, dec: 5, mult: 100000, step: 0.00011, yahoo: 'AUDUSD=X' },
+    USDCAD: { cat: 'Forex',  bid: 1.39810, ask: 1.39826, dec: 5, mult: 100000, step: 0.00013, yahoo: 'USDCAD=X' },
+    BTCUSD: { cat: 'Crypto', bid: 62610.0, ask: 62635.0, dec: 1, mult: 1,      step: 22.0,    binance: 'BTCUSDT' },
+    ETHUSD: { cat: 'Crypto', bid: 2418.50, ask: 2420.10, dec: 2, mult: 10,     step: 1.80,    binance: 'ETHUSDT' },
+    SOLUSD: { cat: 'Crypto', bid: 148.20,  ask: 148.35,  dec: 2, mult: 100,    step: 0.16,    binance: 'SOLUSDT' },
+    XRPUSD: { cat: 'Crypto', bid: 0.6180,  ask: 0.6186,  dec: 4, mult: 10000,  step: 0.0007,  binance: 'XRPUSDT' }
   };
 
   var demoSelectedPair = 'XAUUSD';
   var demoState = JSON.parse(localStorage.getItem('p2p_fx_demo_acc') || 'null');
   var demoTickTimer = null;
+
+  function isMarketOpen(cat) {
+    if (cat === 'Crypto') return true;
+    var now = new Date();
+    var utcDay = now.getUTCDay();
+    var utcHour = now.getUTCHours();
+    if (utcDay === 6) return false;
+    if (utcDay === 5 && utcHour >= 22) return false;
+    if (utcDay === 0 && utcHour < 22) return false;
+    return true;
+  }
 
   function createDemoAccount() {
     var size = parseFloat(document.getElementById('demoSizeSel').value) || 10000;
@@ -1784,7 +1795,7 @@ drawBt();
       initial: size,
       balance: size,
       leverage: lev,
-      positions: new Array()
+      positions: []
     };
     saveDemoState();
     renderDemoTerminal();
@@ -1798,7 +1809,22 @@ drawBt();
     demoSelectedPair = sym;
     var tag = document.getElementById('dmSelPairTag');
     if (tag) tag.textContent = sym;
+    updateMarketStatusBadge();
     updateDemoTicketPrices();
+    if (typeof buildDemoCandles === 'function') buildDemoCandles();
+  }
+
+  function updateMarketStatusBadge() {
+    var p = demoPairs[demoSelectedPair];
+    var feedTag = document.getElementById('dmFeedStatus');
+    if (!p || !feedTag) return;
+    if (!isMarketOpen(p.cat)) {
+      feedTag.textContent = '🔴 ' + p.cat.toUpperCase() + ' CLOSED (OPENS MON 03:30 IST)';
+      feedTag.className = 'tag-r';
+    } else {
+      feedTag.textContent = '● LIVE REAL-TIME FEED';
+      feedTag.className = 'tag-g';
+    }
   }
 
   function updateDemoTicketPrices() {
@@ -1810,26 +1836,46 @@ drawBt();
 
   async function syncRealDemoPrices() {
     try {
-       var apiUrl = ['https://', '://binance.com', '/api/v3/ticker/bookTicker'].join('');
-   var res = await fetch(apiUrl);
+      var res = await fetch('https://binance.com');
       var list = await res.json();
-      if (!Array.isArray(list)) return;
-      var map = {};
-      for (var i = 0; i < list.length; i++) map[list[i].symbol] = list[i];
-
-      var keys = Object.keys(demoPairs);
-      for (var k = 0; k < keys.length; k++) {
-        var sym = keys[k];
-        var cfg = demoPairs[sym];
-        if (cfg.binance && map[cfg.binance]) {
-          cfg.bid = +parseFloat(map[cfg.binance].bidPrice).toFixed(cfg.dec);
-          cfg.ask = +parseFloat(map[cfg.binance].askPrice).toFixed(cfg.dec);
+      if (Array.isArray(list)) {
+        var map = {};
+        for (var i = 0; i < list.length; i++) map[list[i].symbol] = list[i];
+        var keys = Object.keys(demoPairs);
+        for (var k = 0; k < keys.length; k++) {
+          var sym = keys[k];
+          var cfg = demoPairs[sym];
+          if (cfg.binance && map[cfg.binance]) {
+            cfg.bid = +parseFloat(map[cfg.binance].bidPrice).toFixed(cfg.dec);
+            cfg.ask = +parseFloat(map[cfg.binance].askPrice).toFixed(cfg.dec);
+          }
         }
       }
-      var feedTag = document.getElementById('dmFeedStatus');
-      if (feedTag) feedTag.textContent = '● LIVE BINANCE + FX FEED';
     } catch (e) {}
+
+    var fxKeys = Object.keys(demoPairs).filter(function(s) { return demoPairs[s].yahoo; });
+    await Promise.all(fxKeys.map(async function(sym) {
+      var cfg = demoPairs[sym];
+      try {
+        var yUrl = 'https://yahoo.com' + encodeURIComponent(cfg.yahoo) + '?range=1d&interval=1m';
+        var proxyUrl = 'https://corsproxy.io?' + encodeURIComponent(yUrl);
+        var yRes = await fetch(proxyUrl);
+        var yJson = await yRes.json();
+        var meta = yJson.chart && yJson.chart.result && yJson.chart.result.meta;
+        if (meta && meta.regularMarketPrice) {
+          var liveP = +parseFloat(meta.regularMarketPrice).toFixed(cfg.dec);
+          var spread = +(cfg.step * 0.8).toFixed(cfg.dec);
+          cfg.bid = liveP;
+          cfg.ask = +(liveP + spread).toFixed(cfg.dec);
+        }
+      } catch (e) {}
+    }));
+
+    updateMarketStatusBadge();
+    renderDemoMarketWatch();
+    updateActiveDemoChartCandle();
   }
+
   function renderDemoMarketWatch() {
     var body = document.getElementById('dmWatchBody');
     if (!body) return;
@@ -1838,9 +1884,11 @@ drawBt();
     for (var i = 0; i < keys.length; i++) {
       var sym = keys[i];
       var p = demoPairs[sym];
+      var openNow = isMarketOpen(p.cat);
       var activeStyle = sym === demoSelectedPair ? ' style="background:rgba(0,255,136,0.08);"' : '';
+      var statusTag = openNow ? '' : ' <span class="tag-r" style="font-size:0.6rem;">CLOSED</span>';
       html += '<tr' + activeStyle + ' onclick="selectDemoPair(\'' + sym + '\')">' +
-        '<td><strong>' + sym + '</strong></td>' +
+        '<td><strong>' + sym + '</strong>' + statusTag + '</td>' +
         '<td><small>' + p.cat + '</small></td>' +
         '<td class="loss" style="font-family:monospace;">' + p.bid.toFixed(p.dec) + '</td>' +
         '<td class="win" style="font-family:monospace;">' + p.ask.toFixed(p.dec) + '</td>' +
@@ -1855,6 +1903,11 @@ drawBt();
     if (!demoState) { alert('Please create your Demo Account first!'); return; }
     var p = demoPairs[demoSelectedPair];
     if (!p) return;
+
+    if (!isMarketOpen(p.cat)) {
+      alert(demoSelectedPair + ' (' + p.cat + ') market is currently CLOSED for the weekend. Trading reopens Monday at 03:30 AM IST.');
+      return;
+    }
 
     var lots = Math.max(0.01, parseFloat(document.getElementById('dmLots').value) || 0.10);
     var slVal = parseFloat(document.getElementById('dmSl').value);
@@ -1888,6 +1941,11 @@ drawBt();
 
     var pos = demoState.positions[idx];
     var p = demoPairs[pos.sym];
+    if (!isMarketOpen(p.cat) && forcedExit === undefined) {
+      alert(pos.sym + ' market is currently CLOSED for the weekend. You can close this position once the market opens on Monday.');
+      return;
+    }
+
     var exitPrice = forcedExit !== undefined ? forcedExit : (pos.side === 'BUY' ? p.bid : p.ask);
     var diff = pos.side === 'BUY' ? (exitPrice - pos.entry) : (pos.entry - exitPrice);
     var netPnl = +(diff * pos.lots * p.mult).toFixed(2);
@@ -1896,7 +1954,6 @@ drawBt();
     demoState.positions.splice(idx, 1);
     saveDemoState();
 
-    // Auto-log closed demo trade into main Trades & Analytics journal
     if (typeof trades !== 'undefined' && Array.isArray(trades)) {
       trades.unshift({
         id: pos.ticket,
@@ -1923,131 +1980,115 @@ drawBt();
     if (!demoState || !demoState.positions.length) return;
     var copy = demoState.positions.slice();
     for (var i = 0; i < copy.length; i++) {
-      closeDemoPosition(copy[i].ticket, 'Close All');
+      var p = demoPairs[copy[i].sym];
+      if (p && isMarketOpen(p.cat)) closeDemoPosition(copy[i].ticket, 'Close All');
     }
   }
 
-  function tickDemoMarket() {
-    var keys = Object.keys(demoPairs);
-    for (var i = 0; i < keys.length; i++) {
-      var p = demoPairs[keys[i]];
-      var spread = +(p.ask - p.bid).toFixed(p.dec);
-      var move = (Math.random() - 0.495) * p.step;
-      p.bid = +(p.bid + move).toFixed(p.dec);
-      p.ask = +(p.bid + Math.max(spread, p.step * 0.2)).toFixed(p.dec);
-    }
+  function updateActiveDemoChartCandle() {
+    var selCfg = demoPairs[demoSelectedPair];
+    if (!selCfg || !dmBars || !dmBars.length) return;
 
-    // Monitor live SL/TP hits on open demo positions
-    if (demoState && demoState.positions.length) {
-      var openCopy = demoState.positions.slice();
-      for (var j = 0; j < openCopy.length; j++) {
-        var pos = openCopy[j];
-        var cfg = demoPairs[pos.sym];
-        if (!cfg) continue;
-        var currPrice = pos.side === 'BUY' ? cfg.bid : cfg.ask;
-        if (pos.side === 'BUY') {
-          if (pos.sl !== null && currPrice <= pos.sl) closeDemoPosition(pos.ticket, 'Stop Loss Hit', pos.sl);
-          else if (pos.tp !== null && currPrice >= pos.tp) closeDemoPosition(pos.ticket, 'Take Profit Hit', pos.tp);
-        } else {
-          if (pos.sl !== null && currPrice >= pos.sl) closeDemoPosition(pos.ticket, 'Stop Loss Hit', pos.sl);
-          else if (pos.tp !== null && currPrice <= pos.tp) closeDemoPosition(pos.ticket, 'Take Profit Hit', pos.tp);
-        }
-      }
-    }
-      // ... right after the closing } of if (demoState && demoState.positions.length) ...
+    var activeBar = dmBars[dmBars.length - 1];
+    activeBar.c = selCfg.bid;
+    if (activeBar.c > activeBar.h) activeBar.h = activeBar.c;
+    if (activeBar.c < activeBar.l) activeBar.l = activeBar.c;
 
-      // 👇 PASTE THE selCfg CANDLE-TICK BLOCK RIGHT HERE 👇
-      var selCfg = demoPairs[demoSelectedPair];
-      if (selCfg && dmBars.length) {
-        var activeBar = dmBars[dmBars.length - 1];
-        activeBar.c = selCfg.bid;
-        if (activeBar.c > activeBar.h) activeBar.h = activeBar.c;
-        if (activeBar.c < activeBar.l) activeBar.l = activeBar.c;
-        dmSecLeft--;
-        if (dmSecLeft <= 0) {
-          dmSecLeft = dmTfSecs[dmTf] || 60;
-          dmBars.push({
-            o: selCfg.bid, h: selCfg.bid, l: selCfg.bid, c: selCfg.bid,
-            t: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })
-          });
-          if (dmBars.length > 58) dmBars.shift();
-        }
-        drawDemoChart();
-      }
-
-      renderDemoMarketWatch();
-      renderDemoTerminal();
-    }
-
-  function renderDemoTerminal() {
-    var badge = document.getElementById('demoAccBadge');
-    var wrap = document.getElementById('demoTerminalWrap');
-    if (!demoState) {
-      if (badge) { badge.textContent = 'No Active Demo Account'; badge.className = 'tag-r'; }
-      if (wrap) wrap.style.display = 'none';
-      return;
-    }
-
-    if (badge) {
-      badge.textContent = '● ' + demoState.name + ' (' + demoState.id + ')';
-      badge.className = 'tag-g';
-    }
-    if (wrap) wrap.style.display = 'block';
-
-    var totalFloat = 0;
-    var usedMargin = 0;
-    var openRows = '';
-
-    for (var i = 0; i < demoState.positions.length; i++) {
-      var pos = demoState.positions[i];
-      var p = demoPairs[pos.sym] || { bid: pos.entry, ask: pos.entry, dec: 2, mult: 100 };
-      var curr = pos.side === 'BUY' ? p.bid : p.ask;
-      var diff = pos.side === 'BUY' ? (curr - pos.entry) : (pos.entry - curr);
-      var pnl = +(diff * pos.lots * p.mult).toFixed(2);
-      totalFloat += pnl;
-      usedMargin += (pos.lots * 100000) / (demoState.leverage || 500);
-
-      var slTxt = pos.sl !== null ? pos.sl.toFixed(p.dec) : '—';
-      var tpTxt = pos.tp !== null ? pos.tp.toFixed(p.dec) : '—';
-
-      openRows += '<tr>' +
-        '<td><small>' + pos.ticket + '</small></td>' +
-        '<td><strong>' + pos.sym + '</strong></td>' +
-        '<td><span class="' + (pos.side === 'BUY' ? 'tag-g' : 'tag-r') + '">' + pos.side + '</span></td>' +
-        '<td>' + pos.lots + '</td>' +
-        '<td>' + pos.entry.toFixed(p.dec) + '</td>' +
-        '<td>' + curr.toFixed(p.dec) + '</td>' +
-        '<td>' + slTxt + ' / ' + tpTxt + '</td>' +
-        '<td class="' + (pnl >= 0 ? 'win' : 'loss') + '">' + (pnl >= 0 ? '+$' : '-$') + Math.abs(pnl).toFixed(2) + '</td>' +
-        '<td><button type="button" class="btn-r" style="padding:3px 8px; font-size:0.72rem;" onclick="closeDemoPosition(\'' + pos.ticket + '\', \'Manual Close\')">Close</button></td>' +
-      '</tr>';
-    }
-
-    var equity = +(demoState.balance + totalFloat).toFixed(2);
-    var freeMargin = Math.max(0, +(equity - usedMargin).toFixed(2));
-
-    if (document.getElementById('dmBal')) document.getElementById('dmBal').textContent = '$' + demoState.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    if (document.getElementById('dmEq')) document.getElementById('dmEq').textContent = '$' + equity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    if (document.getElementById('dmFloat')) {
-      document.getElementById('dmFloat').textContent = (totalFloat >= 0 ? '+$' : '-$') + Math.abs(totalFloat).toFixed(2);
-      document.getElementById('dmFloat').className = totalFloat >= 0 ? 'win' : 'loss';
-    }
-    if (document.getElementById('dmMargin')) document.getElementById('dmMargin').textContent = '$' + freeMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' (1:' + demoState.leverage + ')';
-    if (document.getElementById('dmOpenCount')) document.getElementById('dmOpenCount').textContent = demoState.positions.length;
-
-    var openBody = document.getElementById('dmOpenBody');
-    if (openBody) {
-      openBody.innerHTML = openRows || '<tr><td colspan="9" style="text-align:center; color:var(--muted); padding:14px;">No open demo positions. Click BUY or SELL above to open a live demo trade.</td></tr>';
-    }
-  }
-
-  // Initialize Demo Terminal & Start Real-Time Market Ticks
-  syncRealDemoPrices().then(function() {
-    renderDemoMarketWatch();
-    renderDemoTerminal();
-  });
-  setInterval(syncRealDemoPrices, 15000);
-  if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1200);
+    if (isMarketOpen(selCfg.cat)) {
+      dmSecLeft--;
+      if (dmSecLeft <= 0) {
+        dmSecLeft = dmTfSecs[dmTf] || 60;
+        dmBars.push({
+          o: selCfg.bid, h: selCfg.bid, l: selCfg.bid, c: selCfg.bid,
+t: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })
+});
+if (dmBars.length > 58) dmBars.shift();
+}
+}
+if (typeof drawDemoChart === 'function') drawDemoChart();
+}
+function tickDemoMarket() {
+updateMarketStatusBadge();
+if (demoState && demoState.positions.length) {
+var openCopy = demoState.positions.slice();
+for (var j = 0; j < openCopy.length; j++) {
+var pos = openCopy[j];
+var cfg = demoPairs[pos.sym];
+if (!cfg || !isMarketOpen(cfg.cat)) continue;
+var currPrice = pos.side === 'BUY' ? cfg.bid : cfg.ask;
+if (pos.side === 'BUY') {
+if (pos.sl !== null && currPrice <= pos.sl) closeDemoPosition(pos.ticket, 'Stop Loss Hit', pos.sl);
+else if (pos.tp !== null && currPrice >= pos.tp) closeDemoPosition(pos.ticket, 'Take Profit Hit', pos.tp);
+} else {
+if (pos.sl !== null && currPrice >= pos.sl) closeDemoPosition(pos.ticket, 'Stop Loss Hit', pos.sl);
+else if (pos.tp !== null && currPrice <= pos.tp) closeDemoPosition(pos.ticket, 'Take Profit Hit', pos.tp);
+}
+}
+}
+updateActiveDemoChartCandle();
+renderDemoMarketWatch();
+renderDemoTerminal();
+}
+function renderDemoTerminal() {
+var badge = document.getElementById('demoAccBadge');
+var wrap = document.getElementById('demoTerminalWrap');
+if (!demoState) {
+if (badge) { badge.textContent = 'No Active Demo Account'; badge.className = 'tag-r'; }
+if (wrap) wrap.style.display = 'none';
+return;
+}
+if (badge) {
+badge.textContent = '● ' + demoState.name + ' (' + demoState.id + ')';
+badge.className = 'tag-g';
+}
+if (wrap) wrap.style.display = 'block';
+var totalFloat = 0;
+var usedMargin = 0;
+var openRows = '';
+for (var i = 0; i < demoState.positions.length; i++) {
+var pos = demoState.positions[i];
+var p = demoPairs[pos.sym] || { bid: pos.entry, ask: pos.entry, dec: 2, mult: 100 };
+var curr = pos.side === 'BUY' ? p.bid : p.ask;
+var diff = pos.side === 'BUY' ? (curr - pos.entry) : (pos.entry - curr);
+var pnl = +(diff * pos.lots * p.mult).toFixed(2);
+totalFloat += pnl;
+usedMargin += (pos.lots * 100000) / (demoState.leverage || 500);
+var slTxt = pos.sl !== null ? pos.sl.toFixed(p.dec) : '—';
+var tpTxt = pos.tp !== null ? pos.tp.toFixed(p.dec) : '—';
+openRows += '' +
+'' + pos.ticket + '' +
+'' + pos.sym + '' +
+'' + pos.side + '' +
+'' + pos.lots + '' +
+'' + pos.entry.toFixed(p.dec) + '' +
+'' + curr.toFixed(p.dec) + '' +
+'' + slTxt + ' / ' + tpTxt + '' +
+'' + (pnl >= 0 ? '+$' : '-$') + Math.abs(pnl).toFixed(2) + '' +
+'Close' +
+'';
+}
+var equity = +(demoState.balance + totalFloat).toFixed(2);
+var freeMargin = Math.max(0, +(equity - usedMargin).toFixed(2));
+if (document.getElementById('dmBal')) document.getElementById('dmBal').textContent = '$' + demoState.balance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+if (document.getElementById('dmEq')) document.getElementById('dmEq').textContent = '$' + equity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+if (document.getElementById('dmFloat')) {
+document.getElementById('dmFloat').textContent = (totalFloat >= 0 ? '+$' : '-$') + Math.abs(totalFloat).toFixed(2);
+document.getElementById('dmFloat').className = totalFloat >= 0 ? 'win' : 'loss';
+}
+if (document.getElementById('dmMargin')) document.getElementById('dmMargin').textContent = '$' + freeMargin.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' (1:' + demoState.leverage + ')';
+if (document.getElementById('dmOpenCount')) document.getElementById('dmOpenCount').textContent = demoState.positions.length;
+var openBody = document.getElementById('dmOpenBody');
+if (openBody) {
+openBody.innerHTML = openRows || 'No open demo positions. Click BUY or SELL above to open a live demo trade.';
+}
+}
+// Initialize Demo Terminal & Start Real-Time Market Sync (Every 2s)
+syncRealDemoPrices().then(function() {
+renderDemoMarketWatch();
+renderDemoTerminal();
+});
+setInterval(syncRealDemoPrices, 2000);
+if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
 </script>
     <!-- 9. DYNAMIC LEADERBOARD -->
     <section id="v-leaderboard" class="view">
