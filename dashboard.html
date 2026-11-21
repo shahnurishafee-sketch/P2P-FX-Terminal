@@ -1834,46 +1834,90 @@ drawBt();
     if (document.getElementById('dmTicketAsk')) document.getElementById('dmTicketAsk').textContent = p.ask.toFixed(p.dec);
   }
 
-  async function syncRealDemoPrices() {
+    async function syncRealDemoPrices() {
+    // 1. Live Crypto Prices (Binance Direct + Coinbase Automatic Fallback for India ISPs)
+    var cryptoLoaded = false;
     try {
       var res = await fetch('https://binance.com');
-      var list = await res.json();
-      if (Array.isArray(list)) {
-        var map = {};
-        for (var i = 0; i < list.length; i++) map[list[i].symbol] = list[i];
-        var keys = Object.keys(demoPairs);
-        for (var k = 0; k < keys.length; k++) {
-          var sym = keys[k];
-          var cfg = demoPairs[sym];
-          if (cfg.binance && map[cfg.binance]) {
-            cfg.bid = +parseFloat(map[cfg.binance].bidPrice).toFixed(cfg.dec);
-            cfg.ask = +parseFloat(map[cfg.binance].askPrice).toFixed(cfg.dec);
-          }
+      if (res.ok) {
+        var list = await res.json();
+        if (Array.isArray(list)) {
+          var map = {};
+          for (var i = 0; i < list.length; i++) map[list[i].symbol] = list[i];
+          Object.keys(demoPairs).forEach(function(sym) {
+            var cfg = demoPairs[sym];
+            if (cfg.binance && map[cfg.binance]) {
+              cfg.bid = +parseFloat(map[cfg.binance].bidPrice).toFixed(cfg.dec);
+              cfg.ask = +parseFloat(map[cfg.binance].askPrice).toFixed(cfg.dec);
+            }
+          });
+          cryptoLoaded = true;
         }
       }
     } catch (e) {}
 
-    var fxKeys = Object.keys(demoPairs).filter(function(s) { return demoPairs[s].yahoo; });
-    await Promise.all(fxKeys.map(async function(sym) {
-      var cfg = demoPairs[sym];
-      try {
-        var yUrl = 'https://yahoo.com' + encodeURIComponent(cfg.yahoo) + '?range=1d&interval=1m';
-        var proxyUrl = 'https://corsproxy.io?' + encodeURIComponent(yUrl);
-        var yRes = await fetch(proxyUrl);
-        var yJson = await yRes.json();
-        var meta = yJson.chart && yJson.chart.result && yJson.chart.result.meta;
-        if (meta && meta.regularMarketPrice) {
-          var liveP = +parseFloat(meta.regularMarketPrice).toFixed(cfg.dec);
-          var spread = +(cfg.step * 0.8).toFixed(cfg.dec);
-          cfg.bid = liveP;
-          cfg.ask = +(liveP + spread).toFixed(cfg.dec);
+    if (!cryptoLoaded) {
+      var cbMap = { BTCUSD: 'BTC-USD', ETHUSD: 'ETH-USD', SOLUSD: 'SOL-USD', XRPUSD: 'XRP-USD' };
+      await Promise.all(Object.keys(cbMap).map(async function(sym) {
+        try {
+          var cfg = demoPairs[sym];
+          var cbRes = await fetch('https://coinbase.com' + cbMap[sym] + '/spot');
+          var cbJson = await cbRes.json();
+          if (cbJson && cbJson.data && cbJson.data.amount) {
+            var price = +parseFloat(cbJson.data.amount).toFixed(cfg.dec);
+            cfg.bid = price;
+            cfg.ask = +(price + cfg.step * 0.6).toFixed(cfg.dec);
+          }
+        } catch (e) {}
+      }));
+    }
+
+    // 2. Live Spot Gold (XAUUSD) — Direct CORS-Enabled Feed (No Proxy Needed)
+    try {
+      var gRes = await fetch('https://gold-api.com');
+      if (gRes.ok) {
+        var gJson = await gRes.json();
+        if (gJson && gJson.price) {
+          var xauCfg = demoPairs.XAUUSD;
+          var xauPrice = +parseFloat(gJson.price).toFixed(xauCfg.dec);
+          xauCfg.bid = xauPrice;
+          xauCfg.ask = +(xauPrice + 0.35).toFixed(xauCfg.dec);
         }
-      } catch (e) {}
-    }));
+      }
+    } catch (e) {}
+
+    // 3. Live Spot Forex Rates — Direct CORS-Enabled Interbank Feed (No Proxy Needed)
+    try {
+      var fxRes = await fetch('https://er-api.com');
+      if (fxRes.ok) {
+        var fxJson = await fxRes.json();
+        var r = fxJson && fxJson.rates;
+        if (r) {
+          var fxQuotes = {
+            EURUSD: r.EUR ? (1 / r.EUR) : null,
+            GBPUSD: r.GBP ? (1 / r.GBP) : null,
+            AUDUSD: r.AUD ? (1 / r.AUD) : null,
+            USDJPY: r.JPY || null,
+            USDCAD: r.CAD || null,
+            GBPJPY: (r.GBP && r.JPY) ? (r.JPY / r.GBP) : null
+          };
+          Object.keys(fxQuotes).forEach(function(sym) {
+            var val = fxQuotes[sym];
+            var cfg = demoPairs[sym];
+            if (val && cfg) {
+              var bidP = +val.toFixed(cfg.dec);
+              cfg.bid = bidP;
+              cfg.ask = +(bidP + cfg.step * 0.8).toFixed(cfg.dec);
+            }
+          });
+        }
+      }
+    } catch (e) {}
 
     updateMarketStatusBadge();
     renderDemoMarketWatch();
     updateActiveDemoChartCandle();
+  }
   }
 
   function renderDemoMarketWatch() {
@@ -3066,7 +3110,7 @@ renderAll();
     dmBars = dmAllBars.slice(startIdx, endIdx);
   }
 
-  async function buildDemoCandles() {
+    async function buildDemoCandles() {
     var p = demoPairs[demoSelectedPair];
     if (!p) return;
     var titleEl = document.getElementById('dmChartTitle');
@@ -3076,10 +3120,11 @@ renderAll();
     dmPanOffset = 0;
     dmSecLeft = dmTfSecs[dmTf] || 60;
 
+    // 1. Load Real Crypto Candles from Binance (with Coinbase Exchange Fallback)
     if (p.binance) {
       try {
         var bMap = { '1m': '1m', '3m': '3m', '5m': '5m', '15m': '15m', '30m': '30m', '1H': '1h', '4H': '4h', '1D': '1d' };
-        var url = ['https://', '://binance.com', '/api/v3/klines?symbol='].join('') + p.binance + '&interval=' + (bMap[dmTf] || '1m') + '&limit=220';
+        var url = 'https://binance.com' + p.binance + '&interval=' + (bMap[dmTf] || '1m') + '&limit=220';
         var res = await fetch(url);
         var arr = await res.json();
         if (Array.isArray(arr) && arr.length > 10) {
@@ -3101,20 +3146,48 @@ renderAll();
           p.ask = +(p.bid + Math.max(sp, p.step * 0.2)).toFixed(p.dec);
         }
       } catch (e) {}
+
+      // Fallback to Coinbase Exchange Candles if Binance is unreachable
+      if (!dmAllBars.length) {
+        try {
+          var cbPair = demoSelectedPair.replace('USD', '-USD');
+          var granMap = { '1m': 60, '3m': 300, '5m': 300, '15m': 900, '30m': 900, '1H': 3600, '4H': 21600, '1D': 86400 };
+          var cbRes = await fetch('https://coinbase.com' + cbPair + '/candles?granularity=' + (granMap[dmTf] || 300));
+          var cbArr = await cbRes.json();
+          if (Array.isArray(cbArr) && cbArr.length > 10) {
+            cbArr.reverse();
+            for (var cIdx = 0; cIdx < cbArr.length; cIdx++) {
+              var ck = cbArr[cIdx];
+              var cdt = new Date(ck[0] * 1000);
+              dmAllBars.push({
+                o: +parseFloat(ck[3]).toFixed(p.dec),
+                h: +parseFloat(ck[2]).toFixed(p.dec),
+                l: +parseFloat(ck[1]).toFixed(p.dec),
+                c: +parseFloat(ck[4]).toFixed(p.dec),
+                v: Math.round(parseFloat(ck[5])) || 100,
+                t: cdt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false })
+              });
+            }
+          }
+        } catch (e) {}
+      }
     }
 
+    // 2. Build Historical Context Anchored Exactly to Live Spot Gold / Forex Price
     if (!dmAllBars.length) {
+      await syncRealDemoPrices();
+      p = demoPairs[demoSelectedPair];
       var mult = dmTfMult[dmTf] || 1.0;
-      var step = p.step * mult * 3.2;
+      var step = p.step * mult * 2.4;
       var cur = p.bid;
       var now = Date.now();
       var barMs = dmSecLeft * 1000;
       var temp = [];
-      for (var b = 0; b < 200; b++) {
+      for (var b = 0; b < 120; b++) {
         var c = cur;
-        var o = +(c + (Math.random() - 0.5) * step * 1.8).toFixed(p.dec);
-        var h = +(Math.max(o, c) + Math.random() * step * 0.8).toFixed(p.dec);
-        var l = +(Math.min(o, c) - Math.random() * step * 0.8).toFixed(p.dec);
+        var o = b === 0 ? c : +(c + (Math.random() - 0.5) * step * 1.6).toFixed(p.dec);
+        var h = +(Math.max(o, c) + (b === 0 ? 0 : Math.random() * step * 0.7)).toFixed(p.dec);
+        var l = +(Math.min(o, c) - (b === 0 ? 0 : Math.random() * step * 0.7)).toFixed(p.dec);
         var d = new Date(now - b * barMs);
         temp.unshift({
           o: o, h: h, l: l, c: c,
@@ -3129,7 +3202,7 @@ renderAll();
     sliceDemoVisibleBars();
     drawDemoChart();
   }
-
+  
   function getDmScale(c) {
     var padL = 12, padR = 76, padT = 16, padB = 24;
     var rsiH = dmInds.rsi ? 68 : 0;
