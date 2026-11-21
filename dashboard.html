@@ -890,6 +890,30 @@ var btDragStart = null;
     }
     return out;
   }
+  var btSelectedDraw = null;
+
+  function hitTestBtDrawing(pt, sc) {
+    var tol = 10;
+    for (var d = btDrawings.length - 1; d >= 0; d--) {
+      var dr = btDrawings[d];
+      if (dr.type === 'hline') {
+        if (Math.abs(pt.y - sc.priceToY(dr.p1)) <= tol) return { idx: d, handle: 'move' };
+      } else if (dr.type === 'vline') {
+        if (Math.abs(pt.x - sc.idxToX(dr.i1)) <= tol) return { idx: d, handle: 'move' };
+      } else {
+        var x1 = sc.idxToX(dr.i1), y1 = sc.priceToY(dr.p1);
+        var x2 = sc.idxToX(dr.i2), y2 = sc.priceToY(dr.p2);
+        if (Math.hypot(pt.x - x1, pt.y - y1) <= tol) return { idx: d, handle: 'p1' };
+        if (Math.hypot(pt.x - x2, pt.y - y2) <= tol) return { idx: d, handle: 'p2' };
+        var minX = Math.min(x1, x2) - tol, maxX = Math.max(x1, x2) + tol;
+        var minY = Math.min(y1, y2) - tol, maxY = Math.max(y1, y2) + tol;
+        if (pt.x >= minX && pt.x <= maxX && pt.y >= minY && pt.y <= maxY) {
+          return { idx: d, handle: 'move' };
+        }
+      }
+    }
+    return null;
+  }
 
   function drawBt() {
     var c = document.getElementById('btCvs');
@@ -1124,6 +1148,20 @@ ctx.fillStyle = '#38bdf8';
 ctx.fillText((dr.p2 >= dr.p1 ? '+' : '') + diffP + ' (' + diffB + ' bars)', Math.min(mx1, mx2) + 4, Math.min(my1, my2) - 4);
 }
 }
+        // Draw draggable anchor handles on all Backtesting drawings
+    for (var dh = 0; dh < btDrawings.length; dh++) {
+      var item = btDrawings[dh];
+      var ptsList = item.type === 'hline' ? [{ x: sc.padL + 40, y: sc.priceToY(item.p1) }]
+                  : item.type === 'vline' ? [{ x: sc.idxToX(item.i1), y: sc.padT + 30 }]
+                  : [{ x: sc.idxToX(item.i1), y: sc.priceToY(item.p1) }, { x: sc.idxToX(item.i2), y: sc.priceToY(item.p2) }];
+      ptsList.forEach(function(hp) {
+        ctx.fillStyle = '#040706';
+        ctx.strokeStyle = '#00ff88';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(hp.x, hp.y, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      });
+    }
+
 // 9. Active Position Entry, Stop-Loss & Take-Profit Lines
 if (btPos) {
 [
@@ -1242,13 +1280,28 @@ btDragStart = { x: pt.x, y: pt.y, yZoom: btYZoom };
 btDragMode = 'xAxis';
 btDragStart = { x: pt.x, y: pt.y, vis: btVisibleCount };
 } else if (btTool === 'cross') {
-btDragMode = 'chart';
-btDragStart = { x: pt.x, y: pt.y, idx: btReplayIdx, yOff: btYOffset };
+  var scHit = getBtScale(c);
+  var hit = hitTestBtDrawing(pt, scHit);
+  if (hit) {
+    btSelectedDraw = {
+      idx: hit.idx,
+      handle: hit.handle,
+      startIdx: scHit.xToIdx(pt.x),
+      startPrice: scHit.yToPrice(pt.y),
+      orig: Object.assign({}, btDrawings[hit.idx])
+    };
+    btDragMode = 'drawing';
+    return;
+  }
+  btDragMode = 'chart';
+  btDragStart = { x: pt.x, y: pt.y, idx: btReplayIdx, yOff: btYOffset };
 }
 });
+
 window.addEventListener('mouseup', function() {
-btDragMode = null;
-btDragStart = null;
+  btDragMode = null;
+  btDragStart = null;
+  btSelectedDraw = null;
 });
 c.addEventListener('dblclick', function(e) {
 var pt = getCanvasCoords(e);
@@ -1303,6 +1356,31 @@ drawBt();
 }
 return;
 }
+        if (btDragMode === 'drawing' && btSelectedDraw) {
+        var scDr = getBtScale(c);
+        var curIdx = scDr.xToIdx(pt.x);
+        var curPrice = scDr.yToPrice(pt.y);
+        var target = btDrawings[btSelectedDraw.idx];
+        var dIdx = curIdx - btSelectedDraw.startIdx;
+        var dPrice = curPrice - btSelectedDraw.startPrice;
+
+        if (btSelectedDraw.handle === 'p1') {
+          target.i1 = curIdx;
+          target.p1 = curPrice;
+        } else if (btSelectedDraw.handle === 'p2') {
+          target.i2 = curIdx;
+          target.p2 = curPrice;
+        } else {
+          target.i1 = btSelectedDraw.orig.i1 + dIdx;
+          target.p1 = btSelectedDraw.orig.p1 + dPrice;
+          if (target.i2 !== undefined) target.i2 = btSelectedDraw.orig.i2 + dIdx;
+          if (target.p2 !== undefined) target.p2 = btSelectedDraw.orig.p2 + dPrice;
+        }
+        c.style.cursor = 'move';
+        drawBt();
+        return;
+      }
+
 var sc = getBtScale(c);
 var idx = sc.xToIdx(x);
 var b = btBars[idx];
