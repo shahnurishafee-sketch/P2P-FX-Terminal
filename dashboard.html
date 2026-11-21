@@ -2384,10 +2384,10 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
             <div class="mini" style="text-align:left;">
               <small style="color:var(--green); font-weight:800;">🏦 DIRECT BANK / UPI (INR)</small>
               <div style="font-size:0.84rem; margin-top:6px; line-height:1.6;">
-                <div><strong>UPI ID:</strong> <code id="payUpiText">yourname@upi</code> <button type="button" class="btn-o" style="padding:2px 7px; font-size:0.7rem;" onclick="copyPayText('payUpiText', this)">Copy</button></div>
-                <div><strong>Account Name:</strong> Shahnuri Shafee</div>
-                <div><strong>Bank / A/C No:</strong> <code id="payBankText">XXXX-XXXX-1234</code> <button type="button" class="btn-o" style="padding:2px 7px; font-size:0.7rem;" onclick="copyPayText('payBankText', this)">Copy</button></div>
-                <div><strong>IFSC Code:</strong> <code>HDFC0001234</code></div>
+                <div><strong>UPI ID:</strong> <code id="payUpiText">7506532473@kotak</code> <button type="button" class="btn-o" style="padding:2px 7px; font-size:0.7rem;" onclick="copyPayText('payUpiText', this)">Copy</button></div>
+                <div><strong>Account Name:</strong> MohammadShafee </div>
+                <div><strong>Bank / A/C No:</strong> <code id="payBankText">3647678816</code> <button type="button" class="btn-o" style="padding:2px 7px; font-size:0.7rem;" onclick="copyPayText('payBankText', this)">Copy</button></div>
+                <div><strong>IFSC Code:</strong> <code>KKBK0001353</code></div>
               </div>
               <div style="margin-top:8px;">
                 <a href="upi://pay?pa=yourname@upi&pn=P2P%20FX%20Terminal&cu=INR" class="btn-g" style="display:inline-block; text-decoration:none; padding:6px 12px; font-size:0.78rem;">📲 Pay via UPI App (GPay / PhonePe / Paytm)</a>
@@ -2395,11 +2395,29 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
             </div>
 
             <!-- Option 2: Trust Wallet Crypto (USDT TRC20 / BEP20) -->
-            <div class="mini" style="text-align:left;">
-              <small style="color:#38bdf8; font-weight:800;">🛡️ TRUST WALLET CRYPTO (USDT)</small>
-              <div style="font-size:0.84rem; margin-top:6px; line-height:1.6;">
-                <div><strong>USDT (TRC20):</strong> <code id="payTrcText" style="word-break:break-all;">TYourTrustWalletTRC20AddressHere</code> <button type="button" class="btn-o" style="padding:2px 7px; font-size:0.7rem;" onclick="copyPayText('payTrcText', this)">Copy</button></div>
-                <div style="margin-top:4px;"><strong>USDT (BEP20 / BSC):</strong> <code id="payBepText" style="word-break:break-all;">0xYourTrustWalletBEP20AddressHere</code> <button type="button" class="btn-o" style="padding:2px 7px; font-size:0.7rem;" onclick="copyPayText('payBepText', this)">Copy</button></div>
+                      <div class="mini" style="text-align:left;">
+            <small style="color:#38bdf8; font-weight:800;">🛡️ TRUST WALLET CRYPTO (USDT)</small>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(215px, 1fr)); gap:12px; margin-top:8px;">
+              <!-- USDT TRC20 (TRON) -->
+              <div style="background:var(--card); border:1px solid var(--border); border-radius:8px; padding:10px; text-align:center;">
+                <span class="tag-g" style="margin-bottom:6px; display:inline-block;">USDT • TRC20 (TRON)</span>
+                <div style="background:#fff; padding:6px; border-radius:8px; width:136px; height:136px; margin:6px auto;">
+                  <img id="qrTrcImg" src="https://qrserver.com" alt="USDT TRC20 QR" style="width:124px; height:124px; display:block;">
+                </div>
+                <code id="payTrcText" style="font-size:0.74rem; word-break:break-all; display:block; margin:6px 0;">TBzNDEXWkvxL2fyYSRiUnJC4fGSbBumJVW</code>
+                <button type="button" class="btn-o" style="padding:4px 10px; font-size:0.72rem;" onclick="copyPayText('payTrcText', this)">Copy TRC20 Address</button>
+                <small style="color:var(--red); font-size:0.66rem; margin-top:5px;">Only send Tron (TRC20) assets.</small>
+              </div>
+
+              <!-- USDT BEP20 (BNB Smart Chain) -->
+              <div style="background:var(--card); border:1px solid var(--border); border-radius:8px; padding:10px; text-align:center;">
+                <span class="tag-g" style="margin-bottom:6px; display:inline-block;">USDT • BEP20 (BSC)</span>
+                <div style="background:#fff; padding:6px; border-radius:8px; width:136px; height:136px; margin:6px auto;">
+                  <img id="qrBepImg" src="https://qrserver.com" alt="USDT BEP20 QR" style="width:124px; height:124px; display:block;">
+                </div>
+                <code id="payBepText" style="font-size:0.74rem; word-break:break-all; display:block; margin:6px 0;">0xC8220608ABB260DcB10B4CB84F6C7fc3Eb2087CB</code>
+                <button type="button" class="btn-o" style="padding:4px 10px; font-size:0.72rem;" onclick="copyPayText('payBepText', this)">Copy BEP20 Address</button>
+                <small style="color:var(--red); font-size:0.66rem; margin-top:5px;">Only send BNB Smart Chain (BEP20) assets.</small>
               </div>
             </div>
           </div>
