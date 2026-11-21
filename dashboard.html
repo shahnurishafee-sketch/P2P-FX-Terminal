@@ -3232,6 +3232,31 @@ renderAll();
     }
     return out;
   }
+  var dmSelectedDraw = null; // { idx: number, handle: 'p1' | 'p2' | 'move', startIdx: number, startPrice: number, orig: object }
+
+  function hitTestDemoDrawing(pt, sc) {
+    var tol = 10;
+    for (var d = dmDrawings.length - 1; d >= 0; d--) {
+      var dr = dmDrawings[d];
+      if (dr.type === 'hline') {
+        if (Math.abs(pt.y - sc.pToY(dr.p1)) <= tol) return { idx: d, handle: 'move' };
+      } else if (dr.type === 'vline') {
+        if (Math.abs(pt.x - sc.idxToX(dr.i1)) <= tol) return { idx: d, handle: 'move' };
+      } else {
+        var x1 = sc.idxToX(dr.i1), y1 = sc.pToY(dr.p1);
+        var x2 = sc.idxToX(dr.i2), y2 = sc.pToY(dr.p2);
+        if (Math.hypot(pt.x - x1, pt.y - y1) <= tol) return { idx: d, handle: 'p1' };
+        if (Math.hypot(pt.x - x2, pt.y - y2) <= tol) return { idx: d, handle: 'p2' };
+        // Distance to line segment / bounding box for moving the whole shape
+        var minX = Math.min(x1, x2) - tol, maxX = Math.max(x1, x2) + tol;
+        var minY = Math.min(y1, y2) - tol, maxY = Math.max(y1, y2) + tol;
+        if (pt.x >= minX && pt.x <= maxX && pt.y >= minY && pt.y <= maxY) {
+          return { idx: d, handle: 'move' };
+        }
+      }
+    }
+    return null;
+  }
 
   function drawDemoChart() {
     var c = document.getElementById('dmCvs');
@@ -3410,7 +3435,20 @@ var diffB = Math.abs(dr.i2 - dr.i1);
 ctx.fillStyle = '#38bdf8';
 ctx.fillText((dr.p2 >= dr.p1 ? '+' : '') + diffP + ' (' + diffB + ' bars)', Math.min(mx1, mx2) + 4, Math.min(my1, my2) - 4);
 }
-}
+}    // Draw draggable anchor handles on all drawings
+    for (var dh = 0; dh < dmDrawings.length; dh++) {
+      var item = dmDrawings[dh];
+      var ptsList = item.type === 'hline' ? [{ x: sc.padL + 40, y: sc.pToY(item.p1) }]
+                  : item.type === 'vline' ? [{ x: sc.idxToX(item.i1), y: sc.padT + 30 }]
+                  : [{ x: sc.idxToX(item.i1), y: sc.pToY(item.p1) }, { x: sc.idxToX(item.i2), y: sc.pToY(item.p2) }];
+      ptsList.forEach(function(hp) {
+        ctx.fillStyle = '#040706';
+        ctx.strokeStyle = '#00ff88';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(hp.x, hp.y, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      });
+    }
+
 // 8. Open Demo Position Entry/SL/TP Lines
 if (demoState && Array.isArray(demoState.positions)) {
 for (var dpIdx = 0; dpIdx < demoState.positions.length; dpIdx++) {
@@ -3514,14 +3552,29 @@ dmDragStart = { x: pt.x, y: pt.y, yZoom: dmYZoom };
 dmDragMode = 'xAxis';
 dmDragStart = { x: pt.x, y: pt.y, vis: dmVisCount };
 } else if (dmTool === 'cross') {
-dmDragMode = 'chart';
-dmDragStart = { x: pt.x, y: pt.y, pan: dmPanOffset, yOff: dmYOffset };
+  var scHit = getDmScale(c);
+  var hit = hitTestDemoDrawing(pt, scHit);
+  if (hit) {
+    dmSelectedDraw = {
+      idx: hit.idx,
+      handle: hit.handle,
+      startIdx: scHit.xToIdx(pt.x),
+      startPrice: scHit.yToP(pt.y),
+      orig: Object.assign({}, dmDrawings[hit.idx])
+    };
+    dmDragMode = 'drawing';
+    return;
+  }
+  dmDragMode = 'chart';
+  dmDragStart = { x: pt.x, y: pt.y, pan: dmPanOffset, yOff: dmYOffset };
 }
 });
 window.addEventListener('mouseup', function() {
-dmDragMode = null;
-dmDragStart = null;
+  dmDragMode = null;
+  dmDragStart = null;
+  dmSelectedDraw = null;
 });
+
 c.addEventListener('dblclick', function(e) {
 var pt = getPt(e);
 if (pt.x >= c.width - 76 || pt.y >= c.height - 24) resetDemoZoom();
@@ -3567,6 +3620,31 @@ sliceDemoVisibleBars();
 drawDemoChart();
 return;
 }
+  if (dmDragMode === 'drawing' && dmSelectedDraw) {
+  var scDr = getDmScale(c);
+  var curIdx = scDr.xToIdx(pt.x);
+  var curPrice = scDr.yToP(pt.y);
+  var target = dmDrawings[dmSelectedDraw.idx];
+  var dIdx = curIdx - dmSelectedDraw.startIdx;
+  var dPrice = curPrice - dmSelectedDraw.startPrice;
+
+  if (dmSelectedDraw.handle === 'p1') {
+    target.i1 = curIdx;
+    target.p1 = curPrice;
+  } else if (dmSelectedDraw.handle === 'p2') {
+    target.i2 = curIdx;
+    target.p2 = curPrice;
+  } else {
+    target.i1 = dmSelectedDraw.orig.i1 + dIdx;
+    target.p1 = dmSelectedDraw.orig.p1 + dPrice;
+    if (target.i2 !== undefined) target.i2 = dmSelectedDraw.orig.i2 + dIdx;
+    if (target.p2 !== undefined) target.p2 = dmSelectedDraw.orig.p2 + dPrice;
+  }
+  c.style.cursor = 'move';
+  drawDemoChart();
+  return;
+}
+
 var sc = getDmScale(c);
 var b = dmBars[sc.xToIdx(pt.x)];
 var p = demoPairs[demoSelectedPair] || { dec: 2 };
