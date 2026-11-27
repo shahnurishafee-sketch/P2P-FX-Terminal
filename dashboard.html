@@ -2470,26 +2470,40 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
 
       <!-- Market & Symbol Selector (All Markets) -->
       <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-        <select id="p2pChartSym" onchange="loadP2PChart()" style="width:auto; margin:0; padding:6px 10px; font-weight:700;">
+                <select id="p2pChartSym" onchange="loadP2PChart()" style="width:auto; margin:0; padding:6px 10px; font-weight:700;">
           <optgroup label="Metals & Commodities">
-            <option value="PAXGUSDT|binance|XAUUSD">XAUUSD (Gold Spot)</option>
+            <option value="GC=F|yahoo|XAUUSD">XAU/USD (Gold Live)</option>
+            <option value="SI=F|yahoo|XAGUSD">XAG/USD (Silver Live)</option>
+            <option value="CL=F|yahoo|USOIL">WTI Crude Oil</option>
           </optgroup>
           <optgroup label="Forex Majors">
-            <option value="EURUSDT|binance|EURUSD">EUR/USD</option>
-            <option value="GBPUSDT|binance|GBPUSD">GBP/USD</option>
-            <option value="AUDUSDT|binance|AUDUSD">AUD/USD</option>
+            <option value="EURUSD=X|yahoo|EURUSD">EUR/USD</option>
+            <option value="GBPUSD=X|yahoo|GBPUSD">GBP/USD</option>
+            <option value="USDJPY=X|yahoo|USDJPY">USD/JPY</option>
+            <option value="AUDUSD=X|yahoo|AUDUSD">AUD/USD</option>
+            <option value="USDCAD=X|yahoo|USDCAD">USD/CAD</option>
+            <option value="USDCHF=X|yahoo|USDCHF">USD/CHF</option>
+            <option value="NZDUSD=X|yahoo|NZDUSD">NZD/USD</option>
           </optgroup>
-          <optgroup label="Crypto">
-            <option value="BTCUSDT|binance|BTCUSD">BTC/USD (Bitcoin)</option>
-            <option value="ETHUSDT|binance|ETHUSD">ETH/USD (Ethereum)</option>
-            <option value="SOLUSDT|binance|SOLUSD">SOL/USD (Solana)</option>
+          <optgroup label="Forex Crosses & INR">
+            <option value="GBPJPY=X|yahoo|GBPJPY">GBP/JPY</option>
+            <option value="EURJPY=X|yahoo|EURJPY">EUR/JPY</option>
+            <option value="EURGBP=X|yahoo|EURGBP">EUR/GBP</option>
+            <option value="USDINR=X|yahoo|USDINR">USD/INR</option>
           </optgroup>
-          <optgroup label="Indian Indices (NSE)">
+          <optgroup label="Crypto (24/7 Live)">
+            <option value="BTC-USD|yahoo|BTCUSD">BTC/USD (Bitcoin)</option>
+            <option value="ETH-USD|yahoo|ETHUSD">ETH/USD (Ethereum)</option>
+            <option value="SOL-USD|yahoo|SOLUSD">SOL/USD (Solana)</option>
+            <option value="XRP-USD|yahoo|XRPUSD">XRP/USD (Ripple)</option>
+          </optgroup>
+          <optgroup label="Indian & Global Indices">
             <option value="%5ENSEI|yahoo|NIFTY">NIFTY 50 (NSE)</option>
             <option value="%5ENSEBANK|yahoo|BANKNIFTY">BANK NIFTY (NSE)</option>
+            <option value="%5EGSPC|yahoo|SPX500">S&P 500 (US500)</option>
+            <option value="%5EIXIC|yahoo|NAS100">NASDAQ 100 (US100)</option>
           </optgroup>
         </select>
-
         <!-- Timeframe Selector -->
         <select id="p2pChartTf" onchange="loadP2PChart()" style="width:auto; margin:0; padding:6px 10px; font-weight:700;">
           <option value="1m">1m</option>
@@ -2650,7 +2664,7 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
     return { candles: candles, volumes: volumes, step: st };
   }
 
-  function loadP2PChart() {
+    function loadP2PChart() {
     ensureLwcLoaded(async function() {
       initP2PTradingViewChart();
       if (!p2pCandleSeries) return;
@@ -2660,68 +2674,58 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
 
       var rawVal = document.getElementById('p2pChartSym').value.split('|');
       var apiSym = rawVal.at(0);
-      var source = rawVal.at(1);
       var journalSym = rawVal.at(2);
       var tf = document.getElementById('p2pChartTf').value;
 
-      setP2PBadge('⏳ Fetching ' + journalSym + ' Data...', true);
+      setP2PBadge('⏳ Connecting Live Feed (' + journalSym + ')...', true);
+
+      async function fetchYahooCandles() {
+        var yRange = (tf === '1m') ? '1d' : (tf === '5m' || tf === '15m') ? '5d' : (tf === '1h' || tf === '4h') ? '1mo' : '1y';
+        var yInt = (tf === '4h') ? '1h' : tf;
+        var baseUrl = ['https://', '://yahoo.com', '/v8/finance/chart/'].join('') + apiSym + '?range=' + yRange + '&interval=' + yInt;
+
+        var relays = [
+          ['https://', 'api.allorigins.win', '/raw?url='].join('') + encodeURIComponent(baseUrl),
+          ['https://', 'corsproxy.io', '/?'].join('') + encodeURIComponent(baseUrl)
+        ];
+
+        for (var idx = 0; idx < relays.length; idx++) {
+          try {
+            var res = await fetch(relays.at(idx));
+            if (!res.ok) continue;
+            var json = await res.json();
+            if (json && json.chart && json.chart.result && json.chart.result.at(0)) {
+              return json.chart.result.at(0);
+            }
+          } catch (e) {}
+        }
+        return null;
+      }
+
+      var r = await fetchYahooCandles();
+      if (!r || !r.timestamp) {
+        setP2PBadge('⚠️ Market Closed or Relay Busy — Click Retry', false);
+        return;
+      }
+
+      var q = r.indicators.quote.at(0);
       var candles = [];
       var volumes = [];
-      var isLiveFeed = false;
+      var decimals = (journalSym.indexOf('JPY') !== -1) ? 3 : (journalSym.indexOf('USD') === 3 || journalSym === 'EURGBP' || journalSym === 'USDINR') ? 5 : 2;
 
-      try {
-        if (source === 'binance') {
-          var res = await fetch('https://binance.com' + apiSym + '&interval=' + tf + '&limit=250');
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          var data = await res.json();
-          data.forEach(function(k) {
-            var t = Math.floor(k.at(0) / 1000);
-            var o = parseFloat(k.at(1)), h = parseFloat(k.at(2)), l = parseFloat(k.at(3)), c = parseFloat(k.at(4)), v = parseFloat(k.at(5));
-            candles.push({ time: t, open: o, high: h, low: l, close: c });
-            volumes.push({ time: t, value: v, color: c >= o ? 'rgba(0,255,136,0.22)' : 'rgba(255,42,95,0.22)' });
-          });
+      p2pCandleSeries.applyOptions({
+        priceFormat: { type: 'price', precision: decimals, minMove: Number((1 / Math.pow(10, decimals)).toFixed(decimals)) }
+      });
 
-          p2pLiveSocket = new WebSocket('wss://://binance.com' + apiSym.toLowerCase() + '@kline_' + tf);
-          p2pLiveSocket.onmessage = function(evt) {
-            var msg = JSON.parse(evt.data);
-            if (msg.k) {
-              p2pCandleSeries.update({
-                time: Math.floor(msg.k.t / 1000),
-                open: parseFloat(msg.k.o),
-                high: parseFloat(msg.k.h),
-                low: parseFloat(msg.k.l),
-                close: parseFloat(msg.k.c)
-              });
-            }
-          };
-          isLiveFeed = true;
-        } else if (source === 'yahoo') {
-          var yRange = (tf === '1d') ? '1y' : '30d';
-          var yUrl = 'https://yahoo.com' + apiSym + '?range=' + yRange + '&interval=' + tf;
-          var yRes = await fetch('https://corsproxy.io?' + encodeURIComponent(yUrl));
-          var yJson = await yRes.json();
-          var r = yJson.chart.result.at(0);
-          var q = r.indicators.quote.at(0);
-          for (var i = 0; i < r.timestamp.length; i++) {
-            if (q.open.at(i) == null || q.close.at(i) == null) continue;
-            var yt = r.timestamp.at(i);
-            candles.push({ time: yt, open: q.open.at(i), high: q.high.at(i), low: q.low.at(i), close: q.close.at(i) });
-            volumes.push({ time: yt, value: q.volume.at(i) || 100, color: q.close.at(i) >= q.open.at(i) ? 'rgba(0,255,136,0.22)' : 'rgba(255,42,95,0.22)' });
-          }
-          isLiveFeed = true;
-        }
-      } catch (err) {
-        var fb = buildFallbackCandles(journalSym, tf);
-        candles = fb.candles;
-        volumes = fb.volumes;
-        p2pSimTimer = setInterval(function() {
-          var last = candles.at(candles.length - 1);
-          var nextC = +(last.close + (Math.random() - 0.5) * fb.step * 0.4).toFixed(journalSym.indexOf('USD') === 3 ? 5 : 2);
-          last.close = nextC;
-          if (nextC > last.high) last.high = nextC;
-          if (nextC < last.low) last.low = nextC;
-          p2pCandleSeries.update(last);
-        }, 1200);
+      for (var i = 0; i < r.timestamp.length; i++) {
+        if (q.open.at(i) == null || q.close.at(i) == null) continue;
+        var yt = r.timestamp.at(i);
+        var o = +q.open.at(i).toFixed(decimals);
+        var h = +q.high.at(i).toFixed(decimals);
+        var l = +q.low.at(i).toFixed(decimals);
+        var c = +q.close.at(i).toFixed(decimals);
+        candles.push({ time: yt, open: o, high: h, low: l, close: c });
+        volumes.push({ time: yt, value: q.volume.at(i) || 100, color: c >= o ? 'rgba(0,255,136,0.22)' : 'rgba(255,42,95,0.22)' });
       }
 
       if (candles.length) {
@@ -2752,7 +2756,31 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
         }
         p2pCandleSeries.setMarkers(markers);
         p2pChartObj.timeScale().fitContent();
-        setP2PBadge(isLiveFeed ? '● LIVE STREAM (' + journalSym + ')' : '● SIMULATED FEED (' + journalSym + ')', true);
+
+        var livePrice = (r.meta && r.meta.regularMarketPrice) ? r.meta.regularMarketPrice.toFixed(decimals) : candles.at(candles.length - 1).close.toFixed(decimals);
+        setP2PBadge('● LIVE ' + journalSym + ': ' + livePrice, true);
+
+        // Poll Real-Time Price Every 4 Seconds
+        p2pSimTimer = setInterval(async function() {
+          var fresh = await fetchYahooCandles();
+          if (fresh && fresh.timestamp && fresh.indicators && fresh.indicators.quote.at(0)) {
+            var fq = fresh.indicators.quote.at(0);
+            var lastIdx = fresh.timestamp.length - 1;
+            while (lastIdx >= 0 && fq.close.at(lastIdx) == null) lastIdx--;
+            if (lastIdx >= 0) {
+              var bar = {
+                time: fresh.timestamp.at(lastIdx),
+                open: +fq.open.at(lastIdx).toFixed(decimals),
+                high: +fq.high.at(lastIdx).toFixed(decimals),
+                low: +fq.low.at(lastIdx).toFixed(decimals),
+                close: +fq.close.at(lastIdx).toFixed(decimals)
+              };
+              p2pCandleSeries.update(bar);
+              var currentTick = (fresh.meta && fresh.meta.regularMarketPrice) ? fresh.meta.regularMarketPrice.toFixed(decimals) : bar.close.toFixed(decimals);
+              setP2PBadge('● LIVE ' + journalSym + ': ' + currentTick, true);
+            }
+          }
+        }, 4000);
       }
     });
   }
