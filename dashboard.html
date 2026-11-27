@@ -179,7 +179,7 @@
           <button type="button" class="nav-btn nav-sub" onclick="go('tanalysis', this)"><span>Trade Analysis</span></button>
         </div>
     <button class="nav-btn" onclick="go('market', this)"><span>🌐 Market</span></button>
-    <button class="nav-btn" onclick="go('p2pchart', this)"><span>🕯️ P2P Fx Trading Chart</span> <span class="tag-g">LIVE</span></button
+    <button class="nav-btn" onclick="go('p2pchart', this); setTimeout(loadP2PChart, 80);"><span>🕯️ P2P Fx Trading Chart</span> <span class="tag-g">LIVE</span></button>
     <button class="nav-btn" onclick="go('ai', this)"><span>🤖 AI Report</span> <span class="tag-g">PRO</span></button>
     <button class="nav-btn" onclick="go('backtest', this)"><span>↺ Backtesting</span> <span class="tag-r">ELITE</span></button>
     <button class="nav-btn" onclick="go('demo', this)"><span>🎮 Demo Account</span> <span class="tag-g">FREE</span></button>
@@ -2535,27 +2535,19 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
     if (!container || p2pChartObj || typeof LightweightCharts === 'undefined') return;
 
     p2pChartObj = LightweightCharts.createChart(container, {
-      width: container.clientWidth,
+      width: container.clientWidth || 900,
       height: 480,
       layout: {
         background: { type: 'solid', color: '#050a08' },
-        textColor: '#94a3b8',
+        textColor: '#94a3b8'
       },
       grid: {
         vertLines: { color: '#0e1a15' },
-        horzLines: { color: '#0e1a15' },
+        horzLines: { color: '#0e1a15' }
       },
-      crosshair: {
-        mode: LightweightCharts.CrosshairMode.Normal,
-      },
-      rightPriceScale: {
-        borderColor: '#172b23',
-      },
-      timeScale: {
-        borderColor: '#172b23',
-        timeVisible: true,
-        secondsVisible: false,
-      },
+      crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+      rightPriceScale: { borderColor: '#172b23' },
+      timeScale: { borderColor: '#172b23', timeVisible: true, secondsVisible: false }
     });
 
     p2pCandleSeries = p2pChartObj.addCandlestickSeries({
@@ -2564,16 +2556,14 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
       borderUpColor: '#00ff88',
       borderDownColor: '#ff2a5f',
       wickUpColor: '#00ff88',
-      wickDownColor: '#ff2a5f',
+      wickDownColor: '#ff2a5f'
     });
 
     p2pVolSeries = p2pChartObj.addHistogramSeries({
       priceFormat: { type: 'volume' },
-      priceScaleId: '',
+      priceScaleId: ''
     });
-    p2pChartObj.priceScale('').applyOptions({
-      scaleMargins: { top: 0.82, bottom: 0 },
-    });
+    p2pChartObj.priceScale('').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
 
     p2pEma20Series = p2pChartObj.addLineSeries({ color: '#38bdf8', lineWidth: 1.5, title: 'EMA 20' });
     p2pEma50Series = p2pChartObj.addLineSeries({ color: '#f59e0b', lineWidth: 1.5, title: 'EMA 50' });
@@ -2587,7 +2577,7 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
 
   function calcEmaData(candles, period) {
     var k = 2 / (period + 1);
-    var ema = candles[0].close;
+    var ema = candles.at(0).close;
     return candles.map(function(c, i) {
       ema = i === 0 ? c.close : (c.close * k + ema * (1 - k));
       return { time: c.time, value: ema };
@@ -2609,6 +2599,10 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
 
   async function loadP2PChart() {
     initP2PTradingViewChart();
+    var container = document.getElementById('p2pTvContainer');
+    if (p2pChartObj && container && container.clientWidth > 0) {
+      p2pChartObj.applyOptions({ width: container.clientWidth });
+    }
     if (!p2pCandleSeries) return;
 
     if (p2pLiveSocket) {
@@ -2617,9 +2611,9 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
     }
 
     var rawVal = document.getElementById('p2pChartSym').value.split('|');
-    var apiSym = rawVal;
-    var source = rawVal;
-    var journalSym = rawVal;
+    var apiSym = rawVal.at(0);
+    var source = rawVal.at(1);
+    var journalSym = rawVal.at(2);
     var tf = document.getElementById('p2pChartTf').value;
     var statusEl = document.getElementById('p2pChartStatus');
 
@@ -2632,25 +2626,23 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
         var res = await fetch('https://binance.com' + apiSym + '&interval=' + tf + '&limit=300');
         var data = await res.json();
         data.forEach(function(k) {
-         var t = Math.floor(k / 1000);
-var o = parseFloat(k), h = parseFloat(k), l = parseFloat(k), c = parseFloat(k), v = parseFloat(k);
+          var t = Math.floor(k.at(0) / 1000);
+          var o = parseFloat(k.at(1)), h = parseFloat(k.at(2)), l = parseFloat(k.at(3)), c = parseFloat(k.at(4)), v = parseFloat(k.at(5));
           candles.push({ time: t, open: o, high: h, low: l, close: c });
           volumes.push({ time: t, value: v, color: c >= o ? 'rgba(0,255,136,0.22)' : 'rgba(255,42,95,0.22)' });
         });
 
-        // Connect Real-Time WebSocket for Live Ticks
         p2pLiveSocket = new WebSocket('wss://://binance.com' + apiSym.toLowerCase() + '@kline_' + tf);
         p2pLiveSocket.onmessage = function(evt) {
           var msg = JSON.parse(evt.data);
           if (msg.k) {
-            var bar = {
+            p2pCandleSeries.update({
               time: Math.floor(msg.k.t / 1000),
               open: parseFloat(msg.k.o),
               high: parseFloat(msg.k.h),
               low: parseFloat(msg.k.l),
               close: parseFloat(msg.k.c)
-            };
-            p2pCandleSeries.update(bar);
+            });
           }
         };
         statusEl.textContent = '● LIVE STREAM (' + journalSym + ')';
@@ -2660,13 +2652,13 @@ var o = parseFloat(k), h = parseFloat(k), l = parseFloat(k), c = parseFloat(k), 
         var yUrl = 'https://yahoo.com' + apiSym + '?range=' + yRange + '&interval=' + tf;
         var yRes = await fetch('https://corsproxy.io?' + encodeURIComponent(yUrl));
         var yJson = await yRes.json();
-        var r = yJson.chart.result;
-var q = r.indicators.quote;
+        var r = yJson.chart.result.at(0);
+        var q = r.indicators.quote.at(0);
         for (var i = 0; i < r.timestamp.length; i++) {
-          if (q.open[i] == null || q.close[i] == null) continue;
-          var yt = r.timestamp[i];
-          candles.push({ time: yt, open: q.open[i], high: q.high[i], low: q.low[i], close: q.close[i] });
-          volumes.push({ time: yt, value: q.volume[i] || 100, color: q.close[i] >= q.open[i] ? 'rgba(0,255,136,0.22)' : 'rgba(255,42,95,0.22)' });
+          if (q.open.at(i) == null || q.close.at(i) == null) continue;
+          var yt = r.timestamp.at(i);
+          candles.push({ time: yt, open: q.open.at(i), high: q.high.at(i), low: q.low.at(i), close: q.close.at(i) });
+          volumes.push({ time: yt, value: q.volume.at(i) || 100, color: q.close.at(i) >= q.open.at(i) ? 'rgba(0,255,136,0.22)' : 'rgba(255,42,95,0.22)' });
         }
         statusEl.textContent = '● NSE MARKET FEED (' + journalSym + ')';
         statusEl.className = 'tag-g';
@@ -2678,49 +2670,36 @@ var q = r.indicators.quote;
         p2pEma20Series.setData(calcEmaData(candles, 20));
         p2pEma50Series.setData(calcEmaData(candles, 50));
 
-        // Automatically Plot Logged Journal Trades on This Symbol
         var markers = [];
         if (p2pShowMarkers && typeof trades !== 'undefined' && Array.isArray(trades)) {
           trades.forEach(function(tr) {
             if ((tr.sym || '').toUpperCase().indexOf(journalSym) !== -1 && tr.dat) {
-var trSec = Math.floor(new Date(tr.dat + 'T12:00:00Z').getTime() / 1000);
-var closest = candles.reduce(function(prev, curr) {
-return Math.abs(curr.time - trSec) < Math.abs(prev.time - trSec) ? curr : prev;
-});
-var isLong = (tr.side || '').toLowerCase() === 'long';
-markers.push({
-time: closest.time,
-position: isLong ? 'belowBar' : 'aboveBar',
-color: isLong ? '#00ff88' : '#ff2a5f',
-shape: isLong ? 'arrowUp' : 'arrowDown',
-text: (isLong ? 'LONG ' : 'SHORT ') + (tr.pnl >= 0 ? '+$' + tr.pnl : '-$' + Math.abs(tr.pnl))
-});
-}
-});
-markers.sort(function(a, b) { return a.time - b.time; });
-}
-p2pCandleSeries.setMarkers(markers);
-p2pChartObj.timeScale().fitContent();
-}
-} catch (err) {
-statusEl.textContent = '⚠️ Feed Busy — Click Symbol to Retry';
-statusEl.className = 'tag-r';
-}
-}
-// Auto-load chart when user clicks "P2P Fx Trading Chart" tab
-var origGoForP2PChart = window.go;
-window.go = function(id, btn) {
-if (typeof origGoForP2PChart === 'function') origGoForP2PChart(id, btn);
-if (id === 'p2pchart') {
-setTimeout(function() {
-loadP2PChart();
-if (p2pChartObj) {
-var c = document.getElementById('p2pTvContainer');
-if (c && c.clientWidth > 0) p2pChartObj.applyOptions({ width: c.clientWidth });
-}
-}, 60);
-}
-};
+              var trSec = Math.floor(new Date(tr.dat + 'T12:00:00Z').getTime() / 1000);
+              var closest = candles.reduce(function(prev, curr) {
+                return Math.abs(curr.time - trSec) < Math.abs(prev.time - trSec) ? curr : prev;
+              });
+              var isLong = (tr.side || '').toLowerCase() === 'long';
+              markers.push({
+                time: closest.time,
+                position: isLong ? 'belowBar' : 'aboveBar',
+                color: isLong ? '#00ff88' : '#ff2a5f',
+                shape: isLong ? 'arrowUp' : 'arrowDown',
+                text: (isLong ? 'LONG ' : 'SHORT ') + (tr.pnl >= 0 ? '+$' + tr.pnl : '-$' + Math.abs(tr.pnl))
+              });
+            }
+          });
+          markers.sort(function(a, b) { return a.time - b.time; });
+        }
+        p2pCandleSeries.setMarkers(markers);
+        p2pChartObj.timeScale().fitContent();
+      }
+    } catch (err) {
+      statusEl.textContent = '⚠️ Feed Busy — Click Symbol to Retry';
+      statusEl.className = 'tag-r';
+    }
+  }
+</script>
+
   </main>
 </div>
 
