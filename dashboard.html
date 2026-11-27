@@ -2664,7 +2664,7 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
     return { candles: candles, volumes: volumes, step: st };
   }
 
-      function loadP2PChart() {
+        function loadP2PChart() {
     ensureLwcLoaded(async function() {
       initP2PTradingViewChart();
       if (!p2pCandleSeries) return;
@@ -2672,85 +2672,95 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
       if (p2pLiveSocket) { p2pLiveSocket.close(); p2pLiveSocket = null; }
       if (p2pSimTimer) { clearInterval(p2pSimTimer); p2pSimTimer = null; }
 
+      // 1. PASTE YOUR FREE TWELVE DATA API KEY BELOW:
+      var TWELVE_DATA_KEY = 'PASTE_YOUR_TWELVE_DATA_API_KEY_HERE';
+
       var rawVal = document.getElementById('p2pChartSym').value.split('|');
       var journalSym = rawVal.at(2);
       var tf = document.getElementById('p2pChartTf').value;
 
-      setP2PBadge('⏳ Fetching Live ' + journalSym + ' Price...', true);
+      setP2PBadge('⏳ Loading Spot ' + journalSym + '...', true);
 
-      var cbMap = {
-        XAUUSD: 'PAXG-USD',
-        BTCUSD: 'BTC-USD',
-        ETHUSD: 'ETH-USD',
-        SOLUSD: 'SOL-USD',
-        XRPUSD: 'XRP-USD',
-        EURUSD: 'EUR-USD',
-        GBPUSD: 'GBP-USD'
+      var tdSymbolMap = {
+        XAUUSD: 'XAU/USD',
+        XAGUSD: 'XAG/USD',
+        USOIL: 'WTI/USD',
+        EURUSD: 'EUR/USD',
+        GBPUSD: 'GBP/USD',
+        USDJPY: 'USD/JPY',
+        AUDUSD: 'AUD/USD',
+        USDCAD: 'USD/CAD',
+        USDCHF: 'USD/CHF',
+        NZDUSD: 'NZD/USD',
+        GBPJPY: 'GBP/JPY',
+        EURJPY: 'EUR/JPY',
+        EURGBP: 'EUR/GBP',
+        USDINR: 'USD/INR',
+        BTCUSD: 'BTC/USD',
+        ETHUSD: 'ETH/USD',
+        SOLUSD: 'SOL/USD',
+        XRPUSD: 'XRP/USD',
+        SPX500: 'SPX',
+        NAS100: 'IXIC'
       };
-      var granMap = { '1m': 60, '5m': 300, '15m': 900, '1h': 3600, '4h': 21600, '1d': 86400 };
-      var gran = granMap[tf] || 900;
 
-      var candles = [];
-      var volumes = [];
-      var decimals = (journalSym.indexOf('JPY') !== -1) ? 3 : (journalSym.indexOf('USD') === 3 || journalSym === 'EURGBP' || journalSym === 'USDINR') ? 5 : 2;
+      var tdTfMap = { '1m': '1min', '3m': '5min', '5m': '5min', '15m': '15min', '1h': '1h', '4h': '4h', '1d': '1day' };
+      var tdInterval = tdTfMap[tf] || '15min';
+
+      var decimals = (journalSym.indexOf('JPY') !== -1) ? 3 : (journalSym === 'XAUUSD' || journalSym === 'XAGUSD' || journalSym === 'USOIL' || journalSym === 'BTCUSD' || journalSym === 'ETHUSD' || journalSym === 'SPX500' || journalSym === 'NAS100') ? 2 : 5;
 
       p2pCandleSeries.applyOptions({
         priceFormat: { type: 'price', precision: decimals, minMove: Number((1 / Math.pow(10, decimals)).toFixed(decimals)) }
       });
 
+      var candles = [];
+      var volumes = [];
+      var feedLabel = 'TWELVE DATA SPOT';
+
       try {
-        if (cbMap[journalSym]) {
-          // 1. Direct Coinbase Exchange API (100% CORS-Open & Real-Time)
-          var cbPair = cbMap[journalSym];
-          var cbHost = 'api.exchange.' + 'coinbase.com';
-          var cbUrl = 'https://' + cbHost + '/products/' + cbPair + '/candles?granularity=' + gran;
-          var res = await fetch(cbUrl);
-          var rows = await res.json();
-          if (Array.isArray(rows) && rows.length) {
-            rows.reverse().forEach(function(k) {
-              var t = k.at(0);
-              var l = +Number(k.at(1)).toFixed(decimals);
-              var h = +Number(k.at(2)).toFixed(decimals);
-              var o = +Number(k.at(3)).toFixed(decimals);
-              var c = +Number(k.at(4)).toFixed(decimals);
-              var v = Number(k.at(5)) || 10;
+        var tdSym = tdSymbolMap[journalSym];
+        if (tdSym && TWELVE_DATA_KEY && TWELVE_DATA_KEY !== 'e8a3eab9e9ef4882ab3b1360e2f128d0') {
+          var tdHost = 'api.twelve' + 'data.com';
+          var tdUrl = 'https://' + tdHost + '/time_series?symbol=' + encodeURIComponent(tdSym) + '&interval=' + tdInterval + '&outputsize=250&timezone=UTC&apikey=' + TWELVE_DATA_KEY;
+          var res = await fetch(tdUrl);
+          var data = await res.json();
+
+          if (data && Array.isArray(data.values) && data.values.length) {
+            data.values.reverse().forEach(function(bar) {
+              var t = Math.floor(new Date(bar.datetime.replace(' ', 'T') + 'Z').getTime() / 1000);
+              var o = +parseFloat(bar.open).toFixed(decimals);
+              var h = +parseFloat(bar.high).toFixed(decimals);
+              var l = +parseFloat(bar.low).toFixed(decimals);
+              var c = +parseFloat(bar.close).toFixed(decimals);
+              var v = parseFloat(bar.volume) || 100;
               candles.push({ time: t, open: o, high: h, low: l, close: c });
               volumes.push({ time: t, value: v, color: c >= o ? 'rgba(0,255,136,0.22)' : 'rgba(255,42,95,0.22)' });
             });
           }
-        } else {
-          // 2. Direct Frankfurter ECB API for All Forex Crosses & INR (100% CORS-Open)
-          var baseCcy = journalSym.slice(0, 3);
-          var quoteCcy = journalSym.slice(3, 6);
-          if (baseCcy === 'XAG' || baseCcy === 'USO' || baseCcy === 'NIF' || baseCcy === 'BAN' || baseCcy === 'SPX' || baseCcy === 'NAS') {
-            baseCcy = 'USD'; quoteCcy = 'INR';
-          }
-          var endD = new Date().toISOString().slice(0, 10);
-          var startD = new Date(Date.now() - 180 * 86400000).toISOString().slice(0, 10);
-          var fxHost = 'api.frank' + 'furter.app';
-          var fxUrl = 'https://' + fxHost + '/' + startD + '..' + endD + '?from=' + baseCcy + '&to=' + quoteCcy;
-          var fxRes = await fetch(fxUrl);
-          var fxData = await fxRes.json();
-          var dates = Object.keys(fxData.rates || {}).sort();
-          var prevClose = null;
-          dates.forEach(function(dStr) {
-            var rate = fxData.rates[dStr][quoteCcy];
-            if (!rate) return;
-            var t = Math.floor(new Date(dStr + 'T00:00:00Z').getTime() / 1000);
-            var o = prevClose !== null ? prevClose : rate;
-            var c = +rate.toFixed(decimals);
-            var spread = Math.abs(c - o) * 0.35 + (c * 0.0012);
-            var h = +(Math.max(o, c) + spread).toFixed(decimals);
-            var l = +(Math.min(o, c) - spread).toFixed(decimals);
-            candles.push({ time: t, open: +o.toFixed(decimals), high: h, low: l, close: c });
-            volumes.push({ time: t, value: 500, color: c >= o ? 'rgba(0,255,136,0.22)' : 'rgba(255,42,95,0.22)' });
-            prevClose = c;
-          });
         }
       } catch (e) {}
 
+      // Fallback to Coinbase / Frankfurter if Twelve Data key is missing or daily quota reached
       if (!candles.length) {
-        setP2PBadge('⚠️ Feed Unavailable — Try Another Pair', false);
+        feedLabel = 'BACKUP FEED';
+        var cbMap = { XAUUSD: 'PAXG-USD', BTCUSD: 'BTC-USD', ETHUSD: 'ETH-USD', SOLUSD: 'SOL-USD', XRPUSD: 'XRP-USD', EURUSD: 'EUR-USD', GBPUSD: 'GBP-USD' };
+        var granMap = { '1m': 60, '3m': 300, '5m': 300, '15m': 900, '1h': 3600, '4h': 21600, '1d': 86400 };
+        if (cbMap[journalSym]) {
+          var cbHost = 'api.exchange.' + 'coinbase.com';
+          var cbRes = await fetch('https://' + cbHost + '/products/' + cbMap[journalSym] + '/candles?granularity=' + (granMap[tf] || 900));
+          var rows = await cbRes.json();
+          if (Array.isArray(rows)) {
+            rows.reverse().forEach(function(k) {
+              var t = k.at(0), l = +Number(k.at(1)).toFixed(decimals), h = +Number(k.at(2)).toFixed(decimals), o = +Number(k.at(3)).toFixed(decimals), c = +Number(k.at(4)).toFixed(decimals);
+              candles.push({ time: t, open: o, high: h, low: l, close: c });
+              volumes.push({ time: t, value: Number(k.at(5)) || 10, color: c >= o ? 'rgba(0,255,136,0.22)' : 'rgba(255,42,95,0.22)' });
+            });
+          }
+        }
+      }
+
+      if (!candles.length) {
+        setP2PBadge('⚠️ Check API Key or Try Another Pair', false);
         return;
       }
 
@@ -2783,26 +2793,26 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
       p2pChartObj.timeScale().fitContent();
 
       var livePrice = candles.at(candles.length - 1).close.toFixed(decimals);
-      setP2PBadge('● LIVE ' + journalSym + ': ' + livePrice, true);
+      setP2PBadge('● ' + feedLabel + ' | ' + journalSym + ': ' + livePrice, true);
 
-      // Live Real-Time Ticker Refresh Every 3 Seconds for Coinbase Pairs
-      if (cbMap[journalSym]) {
+      // Refresh Spot Price Every 15 Seconds (Stays Safely Inside Free 800 Credits/Day Limit)
+      if (tdSymbolMap[journalSym] && TWELVE_DATA_KEY !== 'PASTE_YOUR_TWELVE_DATA_API_KEY_HERE') {
         p2pSimTimer = setInterval(async function() {
           try {
-            var tHost = 'api.exchange.' + 'coinbase.com';
-            var tRes = await fetch('https://' + tHost + '/products/' + cbMap[journalSym] + '/ticker');
-            var tData = await tRes.json();
-            if (tData && tData.price) {
-              var pNow = +Number(tData.price).toFixed(decimals);
+            var qHost = 'api.twelve' + 'data.com';
+            var qRes = await fetch('https://' + qHost + '/price?symbol=' + encodeURIComponent(tdSymbolMap[journalSym]) + '&apikey=' + TWELVE_DATA_KEY);
+            var qData = await qRes.json();
+            if (qData && qData.price) {
+              var pNow = +parseFloat(qData.price).toFixed(decimals);
               var lastBar = candles.at(candles.length - 1);
               lastBar.close = pNow;
               if (pNow > lastBar.high) lastBar.high = pNow;
               if (pNow < lastBar.low) lastBar.low = pNow;
               p2pCandleSeries.update(lastBar);
-              setP2PBadge('● LIVE ' + journalSym + ': ' + pNow.toFixed(decimals), true);
+              setP2PBadge('● SPOT ' + journalSym + ': ' + pNow.toFixed(decimals), true);
             }
           } catch (err) {}
-        }, 3000);
+        }, 15000);
       }
     });
   }
