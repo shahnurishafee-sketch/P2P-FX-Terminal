@@ -2673,7 +2673,7 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
       if (p2pSimTimer) { clearInterval(p2pSimTimer); p2pSimTimer = null; }
 
       // 1. PASTE YOUR FREE TWELVE DATA API KEY BELOW:
-      var TWELVE_DATA_KEY = 'PASTE_YOUR_TWELVE_DATA_API_KEY_HERE';
+      var TWELVE_DATA_KEY = 'e8a3eab9e9ef4882ab3b1360e2f128d0';
 
       var rawVal = document.getElementById('p2pChartSym').value.split('|');
       var journalSym = rawVal.at(2);
@@ -2719,7 +2719,7 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
 
       try {
         var tdSym = tdSymbolMap[journalSym];
-        if (tdSym && TWELVE_DATA_KEY && TWELVE_DATA_KEY !== 'e8a3eab9e9ef4882ab3b1360e2f128d0') {
+        if (tdSym && TWELVE_DATA_KEY && TWELVE_DATA_KEY !== 'PASTE_YOUR_TWELVE_DATA_API_KEY_HERE') {
           var tdHost = 'api.twelve' + 'data.com';
           var tdUrl = 'https://' + tdHost + '/time_series?symbol=' + encodeURIComponent(tdSym) + '&interval=' + tdInterval + '&outputsize=250&timezone=UTC&apikey=' + TWELVE_DATA_KEY;
           var res = await fetch(tdUrl);
