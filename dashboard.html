@@ -2530,24 +2530,55 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
   var p2pShowEma = true;
   var p2pShowMarkers = true;
   var p2pLiveSocket = null;
+  var p2pSimTimer = null;
+
+  function setP2PBadge(text, isOk) {
+    var el = document.getElementById('p2pChartStatus');
+    if (el) {
+      el.textContent = text;
+      el.className = isOk ? 'tag-g' : 'tag-r';
+    }
+  }
 
   function ensureLwcLoaded(callback) {
     if (typeof LightweightCharts !== 'undefined') {
       callback();
       return;
     }
-    var s = document.createElement('script');
-    s.src = ['https://', '://unpkg.com', 'lightweight-charts@4.2.1/', 'dist/lightweight-charts.standalone.production.js'].join('');
-    s.onload = callback;
-    document.head.appendChild(s);
+    setP2PBadge('⏳ Loading Chart Engine...', true);
+    var cdns = [
+      ['https://', 'cdn.jsdelivr.net/npm/', 'lightweight-charts@4.2.1/', 'dist/lightweight-charts.standalone.production.js'].join(''),
+      ['https://', '://unpkg.com', 'lightweight-charts@4.2.1/', 'dist/lightweight-charts.standalone.production.js'].join('')
+    ];
+    var idx = 0;
+    function tryNext() {
+      if (idx >= cdns.length) {
+        setP2PBadge('❌ Chart Library Blocked by Network', false);
+        return;
+      }
+      var s = document.createElement('script');
+      s.src = cdns.at(idx++);
+      s.onload = callback;
+      s.onerror = tryNext;
+      document.head.appendChild(s);
+    }
+    tryNext();
   }
 
   function initP2PTradingViewChart() {
     var container = document.getElementById('p2pTvContainer');
-    if (!container || p2pChartObj || typeof LightweightCharts === 'undefined') return;
+    if (!container || typeof LightweightCharts === 'undefined') return;
+
+    var w = container.clientWidth || (container.parentElement ? container.parentElement.clientWidth - 28 : 900);
+    if (w < 100) w = 900;
+
+    if (p2pChartObj) {
+      p2pChartObj.applyOptions({ width: w, height: 480 });
+      return;
+    }
 
     p2pChartObj = LightweightCharts.createChart(container, {
-      width: container.clientWidth || 900,
+      width: w,
       height: 480,
       layout: {
         background: { type: 'solid', color: '#050a08' },
@@ -2581,7 +2612,7 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
     p2pEma50Series = p2pChartObj.addLineSeries({ color: '#f59e0b', lineWidth: 1.5, title: 'EMA 50' });
 
     window.addEventListener('resize', function() {
-      if (p2pChartObj && container.clientWidth > 0) {
+      if (p2pChartObj && container.clientWidth > 50) {
         p2pChartObj.applyOptions({ width: container.clientWidth });
       }
     });
@@ -2609,35 +2640,52 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
     loadP2PChart();
   }
 
+  function buildFallbackCandles(sym, tf) {
+    var bases = { XAUUSD: 2650, EURUSD: 1.085, GBPUSD: 1.295, AUDUSD: 0.655, BTCUSD: 94500, ETHUSD: 3350, SOLUSD: 215, NIFTY: 24200, BANKNIFTY: 51800 };
+    var steps = { XAUUSD: 3.5, EURUSD: 0.0008, GBPUSD: 0.001, AUDUSD: 0.0007, BTCUSD: 240, ETHUSD: 18, SOLUSD: 2.2, NIFTY: 35, BANKNIFTY: 85 };
+    var tfSecs = { '1m': 60, '5m': 300, '15m': 900, '1h': 3600, '4h': 14400, '1d': 86400 };
+    var sec = tfSecs[tf] || 900;
+    var p = bases[sym] || 100;
+    var st = steps[sym] || 1;
+    var now = Math.floor(Date.now() / 1000);
+    var candles = [], volumes = [];
+    for (var i = 200; i >= 0; i--) {
+      var t = now - i * sec;
+      var o = p;
+      var c = +(o + (Math.random() - 0.49) * st * 2).toFixed(sym.indexOf('USD') === 3 ? 5 : 2);
+      var h = +(Math.max(o, c) + Math.random() * st).toFixed(sym.indexOf('USD') === 3 ? 5 : 2);
+      var l = +(Math.min(o, c) - Math.random() * st).toFixed(sym.indexOf('USD') === 3 ? 5 : 2);
+      candles.push({ time: t, open: o, high: h, low: l, close: c });
+      volumes.push({ time: t, value: Math.floor(150 + Math.random() * 800), color: c >= o ? 'rgba(0,255,136,0.22)' : 'rgba(255,42,95,0.22)' });
+      p = c;
+    }
+    return { candles: candles, volumes: volumes, step: st };
+  }
+
   function loadP2PChart() {
     ensureLwcLoaded(async function() {
       initP2PTradingViewChart();
-      var container = document.getElementById('p2pTvContainer');
-      if (p2pChartObj && container && container.clientWidth > 0) {
-        p2pChartObj.applyOptions({ width: container.clientWidth });
-      }
       if (!p2pCandleSeries) return;
 
-      if (p2pLiveSocket) {
-        p2pLiveSocket.close();
-        p2pLiveSocket = null;
-      }
+      if (p2pLiveSocket) { p2pLiveSocket.close(); p2pLiveSocket = null; }
+      if (p2pSimTimer) { clearInterval(p2pSimTimer); p2pSimTimer = null; }
 
       var rawVal = document.getElementById('p2pChartSym').value.split('|');
       var apiSym = rawVal.at(0);
       var source = rawVal.at(1);
       var journalSym = rawVal.at(2);
       var tf = document.getElementById('p2pChartTf').value;
-      var statusEl = document.getElementById('p2pChartStatus');
 
-      statusEl.textContent = '⏳ Loading ' + journalSym + '...';
+      setP2PBadge('⏳ Fetching ' + journalSym + ' Data...', true);
       var candles = [];
       var volumes = [];
+      var isLiveFeed = false;
 
       try {
         if (source === 'binance') {
-          var bRestUrl = ['https://', '://binance.com', '/api/v3/klines?symbol='].join('') + apiSym + '&interval=' + tf + '&limit=300';
+          var bRestUrl = ['https://', '://binance.com', '/api/v3/klines?symbol='].join('') + apiSym + '&interval=' + tf + '&limit=250';
           var res = await fetch(bRestUrl);
+          if (!res.ok) throw new Error('HTTP ' + res.status);
           var data = await res.json();
           data.forEach(function(k) {
             var t = Math.floor(k.at(0) / 1000);
@@ -2660,8 +2708,7 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
               });
             }
           };
-          statusEl.textContent = '● LIVE STREAM (' + journalSym + ')';
-          statusEl.className = 'tag-g';
+          isLiveFeed = true;
         } else if (source === 'yahoo') {
           var yRange = (tf === '1d') ? '1y' : '30d';
           var yUrl = ['https://', '://yahoo.com', '/v8/finance/chart/'].join('') + apiSym + '?range=' + yRange + '&interval=' + tf;
@@ -2676,47 +2723,55 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
             candles.push({ time: yt, open: q.open.at(i), high: q.high.at(i), low: q.low.at(i), close: q.close.at(i) });
             volumes.push({ time: yt, value: q.volume.at(i) || 100, color: q.close.at(i) >= q.open.at(i) ? 'rgba(0,255,136,0.22)' : 'rgba(255,42,95,0.22)' });
           }
-          statusEl.textContent = '● NSE MARKET FEED (' + journalSym + ')';
-          statusEl.className = 'tag-g';
-        }
-
-        if (candles.length) {
-          p2pCandleSeries.setData(candles);
-          p2pVolSeries.setData(volumes);
-          p2pEma20Series.setData(calcEmaData(candles, 20));
-          p2pEma50Series.setData(calcEmaData(candles, 50));
-
-          var markers = [];
-          if (p2pShowMarkers && typeof trades !== 'undefined' && Array.isArray(trades)) {
-            trades.forEach(function(tr) {
-              if ((tr.sym || '').toUpperCase().indexOf(journalSym) !== -1 && tr.dat) {
-                var trSec = Math.floor(new Date(tr.dat + 'T12:00:00Z').getTime() / 1000);
-                var closest = candles.reduce(function(prev, curr) {
-                  return Math.abs(curr.time - trSec) < Math.abs(prev.time - trSec) ? curr : prev;
-                });
-                var isLong = (tr.side || '').toLowerCase() === 'long';
-                markers.push({
-                  time: closest.time,
-                  position: isLong ? 'belowBar' : 'aboveBar',
-                  color: isLong ? '#00ff88' : '#ff2a5f',
-                  shape: isLong ? 'arrowUp' : 'arrowDown',
-                  text: (isLong ? 'LONG ' : 'SHORT ') + (tr.pnl >= 0 ? '+$' + tr.pnl : '-$' + Math.abs(tr.pnl))
-                });
-              }
-            });
-            markers.sort(function(a, b) { return a.time - b.time; });
-          }
-          p2pCandleSeries.setMarkers(markers);
-          p2pChartObj.timeScale().fitContent();
+          isLiveFeed = true;
         }
       } catch (err) {
-        statusEl.textContent = '⚠️ Feed Busy — Click Symbol to Retry';
-        statusEl.className = 'tag-r';
+        // Fallback if ISP/CORS blocks direct API
+        var fb = buildFallbackCandles(journalSym, tf);
+        candles = fb.candles;
+        volumes = fb.volumes;
+        p2pSimTimer = setInterval(function() {
+          var last = candles.at(candles.length - 1);
+          var nextC = +(last.close + (Math.random() - 0.5) * fb.step * 0.4).toFixed(journalSym.indexOf('USD') === 3 ? 5 : 2);
+          last.close = nextC;
+          if (nextC > last.high) last.high = nextC;
+          if (nextC < last.low) last.low = nextC;
+          p2pCandleSeries.update(last);
+        }, 1200);
       }
-    });
-  }
-</script>
 
+      if (candles.length) {
+        p2pCandleSeries.setData(candles);
+        p2pVolSeries.setData(volumes);
+        p2pEma20Series.setData(calcEmaData(candles, 20));
+        p2pEma50Series.setData(calcEmaData(candles, 50));
+
+        var markers = [];
+        if (p2pShowMarkers && typeof trades !== 'undefined' && Array.isArray(trades)) {
+          trades.forEach(function(tr) {
+            if ((tr.sym || '').toUpperCase().indexOf(journalSym) !== -1 && tr.dat) {
+              var trSec = Math.floor(new Date(tr.dat + 'T12:00:00Z').getTime() / 1000);
+              var closest = candles.reduce(function(prev, curr) {
+                return Math.abs(curr.time - trSec) < Math.abs(prev.time - trSec) ? curr : prev;
+              });
+              var isLong = (tr.side || '').toLowerCase() === 'long';
+              markers.push({
+                time: closest.time,
+                position: isLong ? 'belowBar' : 'aboveBar',
+                color: isLong ? '#00ff88' : '#ff2a5f',
+                shape: isLong ? 'arrowUp' : 'arrowDown',
+                text: (isLong ? 'LONG ' : 'SHORT ') + (tr.pnl >= 0 ? '+$' + tr.pnl : '-$' + Math.abs(tr.pnl))
+              });
+            }
+          });
+markers.sort(function(a, b) { return a.time - b.time; });
+}
+p2pCandleSeries.setMarkers(markers);
+p2pChartObj.timeScale().fitContent();
+setP2PBadge(isLiveFeed ? '● LIVE STREAM (' + journalSym + ')' : '● SIMULATED FEED (' + journalSym + ')', true);
+}
+});
+}
   </main>
 </div>
 
