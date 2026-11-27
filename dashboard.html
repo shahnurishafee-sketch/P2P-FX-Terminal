@@ -2519,7 +2519,6 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
 </section>
 
 <!-- Load Official TradingView Lightweight Charts Library -->
-<script src="https://unpkg.com"></script>
 <script id="tvLwcLoader"></script>
 <script>
   var p2pChartObj = null;
@@ -2545,31 +2544,21 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
       callback();
       return;
     }
-    setP2PBadge('⏳ Loading Chart Engine...', true);
-    var cdns = [
-      ['https://', 'cdn.jsdelivr.net/npm/', 'lightweight-charts@4.2.1/', 'dist/lightweight-charts.standalone.production.js'].join(''),
-      ['https://', '://unpkg.com', 'lightweight-charts@4.2.1/', 'dist/lightweight-charts.standalone.production.js'].join('')
-    ];
-    var idx = 0;
-    function tryNext() {
-      if (idx >= cdns.length) {
-        setP2PBadge('❌ Chart Library Blocked by Network', false);
-        return;
-      }
-      var s = document.createElement('script');
-      s.src = cdns.at(idx++);
-      s.onload = callback;
-      s.onerror = tryNext;
-      document.head.appendChild(s);
-    }
-    tryNext();
+    setP2PBadge('⏳ Loading Chart Library...', true);
+    var s = document.createElement('script');
+    s.src = 'https://jsdelivr.net';
+    s.onload = callback;
+    s.onerror = function() {
+      setP2PBadge('❌ Failed to load chart library', false);
+    };
+    document.head.appendChild(s);
   }
 
   function initP2PTradingViewChart() {
     var container = document.getElementById('p2pTvContainer');
     if (!container || typeof LightweightCharts === 'undefined') return;
 
-    var w = container.clientWidth || (container.parentElement ? container.parentElement.clientWidth - 28 : 900);
+    var w = container.clientWidth || 900;
     if (w < 100) w = 900;
 
     if (p2pChartObj) {
@@ -2683,8 +2672,7 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
 
       try {
         if (source === 'binance') {
-          var bRestUrl = ['https://', '://binance.com', '/api/v3/klines?symbol='].join('') + apiSym + '&interval=' + tf + '&limit=250';
-          var res = await fetch(bRestUrl);
+          var res = await fetch('https://binance.com' + apiSym + '&interval=' + tf + '&limit=250');
           if (!res.ok) throw new Error('HTTP ' + res.status);
           var data = await res.json();
           data.forEach(function(k) {
@@ -2694,8 +2682,7 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
             volumes.push({ time: t, value: v, color: c >= o ? 'rgba(0,255,136,0.22)' : 'rgba(255,42,95,0.22)' });
           });
 
-          var wsUrl = ['wss://', '://binance.com', '/ws/'].join('') + apiSym.toLowerCase() + '@kline_' + tf;
-          p2pLiveSocket = new WebSocket(wsUrl);
+          p2pLiveSocket = new WebSocket('wss://://binance.com' + apiSym.toLowerCase() + '@kline_' + tf);
           p2pLiveSocket.onmessage = function(evt) {
             var msg = JSON.parse(evt.data);
             if (msg.k) {
@@ -2711,9 +2698,8 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
           isLiveFeed = true;
         } else if (source === 'yahoo') {
           var yRange = (tf === '1d') ? '1y' : '30d';
-          var yUrl = ['https://', '://yahoo.com', '/v8/finance/chart/'].join('') + apiSym + '?range=' + yRange + '&interval=' + tf;
-          var proxyUrl = ['https://', 'corsproxy.io', '/?'].join('') + encodeURIComponent(yUrl);
-          var yRes = await fetch(proxyUrl);
+          var yUrl = 'https://yahoo.com' + apiSym + '?range=' + yRange + '&interval=' + tf;
+          var yRes = await fetch('https://corsproxy.io?' + encodeURIComponent(yUrl));
           var yJson = await yRes.json();
           var r = yJson.chart.result.at(0);
           var q = r.indicators.quote.at(0);
@@ -2726,7 +2712,6 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
           isLiveFeed = true;
         }
       } catch (err) {
-        // Fallback if ISP/CORS blocks direct API
         var fb = buildFallbackCandles(journalSym, tf);
         candles = fb.candles;
         volumes = fb.volumes;
@@ -2764,14 +2749,15 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
               });
             }
           });
-markers.sort(function(a, b) { return a.time - b.time; });
-}
-p2pCandleSeries.setMarkers(markers);
-p2pChartObj.timeScale().fitContent();
-setP2PBadge(isLiveFeed ? '● LIVE STREAM (' + journalSym + ')' : '● SIMULATED FEED (' + journalSym + ')', true);
-}
-});
-}
+          markers.sort(function(a, b) { return a.time - b.time; });
+        }
+        p2pCandleSeries.setMarkers(markers);
+        p2pChartObj.timeScale().fitContent();
+        setP2PBadge(isLiveFeed ? '● LIVE STREAM (' + journalSym + ')' : '● SIMULATED FEED (' + journalSym + ')', true);
+      }
+    });
+  }
+</script>
   </main>
 </div>
 
