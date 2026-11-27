@@ -2457,93 +2457,147 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
         </div>
       </div>
     </section>
-<!-- 5B. P2P FX TRADING CHART (TRADINGVIEW LIGHTWEIGHT CHARTS ENGINE) -->
+<!-- 5B. P2P FX TRADING CHART (ISOLATED TRADINGVIEW FREE-SUITE MODULE) -->
 <section id="v-p2pchart" class="view">
-  <div class="card" style="padding: 14px;">
-    <!-- Top Header & Controls -->
-    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-bottom:1px solid var(--border); padding-bottom:12px; margin-bottom:12px;">
-      <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+  <div id="p2pChartCard" class="card" style="padding: 14px;">
+    <!-- Row 1: Brand, Live Price, Countdown Timer & Market/Timeframe/Style Selectors -->
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:8px;">
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
         <span class="badge">P2PFB</span>
         <strong style="font-size:1.05rem;">P2P <span style="color:var(--green);">Fx</span> <span style="color:var(--red);">Trading Chart</span></strong>
-        <span id="p2pChartStatus" class="tag-g">● LIVE MULTI-MARKET FEED</span>
+        <span id="p2pChartStatus" class="tag-g">● LIVE SPOT FEED</span>
+        <span id="p2pBarCountdown" class="tag-r" style="font-family:monospace; font-size:0.82rem;">⏱ --:--</span>
       </div>
 
-      <!-- Market & Symbol Selector (All Markets) -->
       <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-                <select id="p2pChartSym" onchange="loadP2PChart()" style="width:auto; margin:0; padding:6px 10px; font-weight:700;">
+        <select id="p2pChartSym" onchange="loadP2PChart()" style="width:auto; margin:0; padding:5px 9px; font-weight:700;">
           <optgroup label="Metals & Commodities">
-            <option value="GC=F|yahoo|XAUUSD">XAU/USD (Gold Live)</option>
-            <option value="SI=F|yahoo|XAGUSD">XAG/USD (Silver Live)</option>
-            <option value="CL=F|yahoo|USOIL">WTI Crude Oil</option>
+            <option value="GC=F|td|XAUUSD">XAU/USD (Gold Spot)</option>
+            <option value="SI=F|td|XAGUSD">XAG/USD (Silver Spot)</option>
+            <option value="CL=F|td|USOIL">WTI Crude Oil</option>
           </optgroup>
           <optgroup label="Forex Majors">
-            <option value="EURUSD=X|yahoo|EURUSD">EUR/USD</option>
-            <option value="GBPUSD=X|yahoo|GBPUSD">GBP/USD</option>
-            <option value="USDJPY=X|yahoo|USDJPY">USD/JPY</option>
-            <option value="AUDUSD=X|yahoo|AUDUSD">AUD/USD</option>
-            <option value="USDCAD=X|yahoo|USDCAD">USD/CAD</option>
-            <option value="USDCHF=X|yahoo|USDCHF">USD/CHF</option>
-            <option value="NZDUSD=X|yahoo|NZDUSD">NZD/USD</option>
+            <option value="EURUSD=X|td|EURUSD">EUR/USD</option>
+            <option value="GBPUSD=X|td|GBPUSD">GBP/USD</option>
+            <option value="USDJPY=X|td|USDJPY">USD/JPY</option>
+            <option value="AUDUSD=X|td|AUDUSD">AUD/USD</option>
+            <option value="USDCAD=X|td|USDCAD">USD/CAD</option>
+            <option value="USDCHF=X|td|USDCHF">USD/CHF</option>
+            <option value="NZDUSD=X|td|NZDUSD">NZD/USD</option>
           </optgroup>
           <optgroup label="Forex Crosses & INR">
-            <option value="GBPJPY=X|yahoo|GBPJPY">GBP/JPY</option>
-            <option value="EURJPY=X|yahoo|EURJPY">EUR/JPY</option>
-            <option value="EURGBP=X|yahoo|EURGBP">EUR/GBP</option>
-            <option value="USDINR=X|yahoo|USDINR">USD/INR</option>
+            <option value="GBPJPY=X|td|GBPJPY">GBP/JPY</option>
+            <option value="EURJPY=X|td|EURJPY">EUR/JPY</option>
+            <option value="EURGBP=X|td|EURGBP">EUR/GBP</option>
+            <option value="USDINR=X|td|USDINR">USD/INR</option>
           </optgroup>
           <optgroup label="Crypto (24/7 Live)">
-            <option value="BTC-USD|yahoo|BTCUSD">BTC/USD (Bitcoin)</option>
-            <option value="ETH-USD|yahoo|ETHUSD">ETH/USD (Ethereum)</option>
-            <option value="SOL-USD|yahoo|SOLUSD">SOL/USD (Solana)</option>
-            <option value="XRP-USD|yahoo|XRPUSD">XRP/USD (Ripple)</option>
+            <option value="BTC-USD|td|BTCUSD">BTC/USD (Bitcoin)</option>
+            <option value="ETH-USD|td|ETHUSD">ETH/USD (Ethereum)</option>
+            <option value="SOL-USD|td|SOLUSD">SOL/USD (Solana)</option>
+            <option value="XRP-USD|td|XRPUSD">XRP/USD (Ripple)</option>
           </optgroup>
-          <optgroup label="Indian & Global Indices">
-            <option value="%5ENSEI|yahoo|NIFTY">NIFTY 50 (NSE)</option>
-            <option value="%5ENSEBANK|yahoo|BANKNIFTY">BANK NIFTY (NSE)</option>
-            <option value="%5EGSPC|yahoo|SPX500">S&P 500 (US500)</option>
-            <option value="%5EIXIC|yahoo|NAS100">NASDAQ 100 (US100)</option>
+          <optgroup label="Indices">
+            <option value="%5EGSPC|td|SPX500">S&P 500 (US500)</option>
+            <option value="%5EIXIC|td|NAS100">NASDAQ 100 (US100)</option>
           </optgroup>
         </select>
-        <!-- Timeframe Selector -->
-        <select id="p2pChartTf" onchange="loadP2PChart()" style="width:auto; margin:0; padding:6px 10px; font-weight:700;">
+
+        <select id="p2pChartTf" onchange="loadP2PChart()" style="width:auto; margin:0; padding:5px 9px; font-weight:700;">
           <option value="1m">1m</option>
+          <option value="3m">3m</option>
           <option value="5m">5m</option>
           <option value="15m" selected>15m</option>
+          <option value="30m">30m</option>
           <option value="1h">1H</option>
           <option value="4h">4H</option>
           <option value="1d">1D</option>
         </select>
 
-        <!-- Overlays Toggle -->
-        <button type="button" id="p2pEmaToggle" class="btn-g" style="padding:6px 10px; font-size:0.78rem;" onclick="toggleP2PEma()">EMA 20/50</button>
-        <button type="button" id="p2pMarkerToggle" class="btn-g" style="padding:6px 10px; font-size:0.78rem;" onclick="toggleP2PMarkers()">📍 Journal Trades</button>
-        <button type="button" class="btn-o" style="padding:6px 10px; font-size:0.78rem;" onclick="if(p2pChartObj) p2pChartObj.timeScale().fitContent()">⟲ Fit Chart</button>
+        <select id="p2pChartStyle" onchange="applyP2PChartStyle()" style="width:auto; margin:0; padding:5px 9px; font-weight:700;">
+          <option value="candles">🕯️ Candles</option>
+          <option value="hollow">▯ Hollow Candles</option>
+          <option value="bars">📊 OHLC Bars</option>
+          <option value="line">📈 Line</option>
+          <option value="area">⛰️ Area</option>
+        </select>
+
+        <button type="button" class="btn-o" style="padding:5px 9px; font-size:0.76rem;" onclick="takeP2PSnapshot()" title="Download Chart Image">📷 Snapshot</button>
+        <button type="button" class="btn-o" style="padding:5px 9px; font-size:0.76rem;" onclick="toggleP2PFullscreen()" title="Fullscreen Chart">⛶</button>
       </div>
     </div>
 
-    <!-- TradingView Lightweight Chart Container -->
-    <div id="p2pTvContainer" style="width:100%; height:480px; border-radius:10px; overflow:hidden; border:1px solid var(--border); position:relative;"></div>
+    <!-- Row 2: Free TradingView Indicators & Drawing Tools -->
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; background:var(--bg); padding:6px 10px; border-radius:8px; border:1px solid var(--border); margin-bottom:8px;">
+      <div id="p2pToolBar" style="display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
+        <button type="button" id="p2pEmaToggle" class="btn-g" style="padding:3px 8px; font-size:0.73rem;" onclick="toggleP2PEma()">EMA 20/50</button>
+        <button type="button" id="p2pBbToggle" class="btn-o" style="padding:3px 8px; font-size:0.73rem;" onclick="toggleP2PBb()">Bollinger</button>
+        <button type="button" id="p2pVolToggle" class="btn-g" style="padding:3px 8px; font-size:0.73rem;" onclick="toggleP2PVol()">Volume</button>
+        <button type="button" id="p2pRsiToggle" class="btn-g" style="padding:3px 8px; font-size:0.73rem;" onclick="toggleP2PRsi()">RSI (14)</button>
+        <button type="button" id="p2pMarkerToggle" class="btn-g" style="padding:3px 8px; font-size:0.73rem;" onclick="toggleP2PMarkers()">📍 Journal</button>
+        <span style="color:var(--border);">|</span>
+        <button type="button" id="p2pDrawNone" class="btn-g" style="padding:3px 8px; font-size:0.73rem;" onclick="setP2PDrawMode('none', this)">✛ Cursor</button>
+        <button type="button" id="p2pDrawHline" class="btn-o" style="padding:3px 8px; font-size:0.73rem;" onclick="setP2PDrawMode('hline', this)">— H-Line</button>
+        <button type="button" id="p2pDrawTrend" class="btn-o" style="padding:3px 8px; font-size:0.73rem;" onclick="setP2PDrawMode('trend', this)">╱ Trendline</button>
+        <button type="button" id="p2pDrawFib" class="btn-o" style="padding:3px 8px; font-size:0.73rem;" onclick="setP2PDrawMode('fib', this)">📐 Fib</button>
+        <button type="button" class="btn-o" style="padding:3px 8px; font-size:0.73rem;" onclick="clearP2PDrawings()">🗑 Clear</button>
+        <button type="button" class="btn-o" style="padding:3px 8px; font-size:0.73rem;" onclick="if(p2pChartObj) p2pChartObj.timeScale().fitContent()">⟲ Auto</button>
+      </div>
+
+      <div style="font-family:monospace; font-size:0.74rem; color:var(--muted); display:flex; gap:10px; flex-wrap:wrap;">
+        <span>O:<strong id="p2pLgO" style="color:var(--text);">—</strong></span>
+        <span>H:<strong id="p2pLgH" class="win">—</strong></span>
+        <span>L:<strong id="p2pLgL" class="loss">—</strong></span>
+        <span>C:<strong id="p2pLgC" style="color:var(--text);">—</strong></span>
+      </div>
+    </div>
+
+    <!-- Main Chart + Right-Axis Countdown Overlay -->
+    <div style="position:relative; width:100%; border-radius:10px; overflow:hidden; border:1px solid var(--border);">
+      <div id="p2pTvContainer" style="width:100%; height:440px;"></div>
+      <div id="p2pRsiContainer" style="width:100%; height:110px; border-top:1px solid var(--border);"></div>
+      <!-- Floating Right-Axis Bar Countdown Pill -->
+      <div id="p2pAxisCountdownBox" style="position:absolute; right:4px; top:10px; background:rgba(11,21,17,0.92); border:1px solid var(--green); color:var(--green); font-family:monospace; font-size:0.74rem; font-weight:800; padding:3px 7px; border-radius:5px; pointer-events:none; z-index:10;">
+        Bar Close: --:--
+      </div>
+    </div>
 
     <!-- Required Apache 2.0 Attribution Footer -->
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-top:10px; font-size:0.75rem; color:var(--muted);">
       <span>Powered by <a href="https://tradingview.com" target="_blank" rel="noopener" style="color:var(--green); text-decoration:underline;">TradingView Lightweight Charts™</a> • Branded for <strong>P2P FX Terminal Community</strong></span>
-      <span>Tip: Scroll to zoom, drag to pan, or double-click price/time axis to reset.</span>
+      <span id="p2pDrawHint">Timezone: IST (UTC+5:30) • Scroll to zoom, drag to pan, double-click axis to reset.</span>
     </div>
   </div>
 </section>
 
-<!-- Load Official TradingView Lightweight Charts Library -->
-<script id="tvLwcLoader"></script>
 <script>
   var p2pChartObj = null;
-  var p2pCandleSeries = null;
+  var p2pRsiChartObj = null;
+  var p2pRsiSeries = null;
+  var p2pMainSeries = null;
   var p2pVolSeries = null;
   var p2pEma20Series = null;
   var p2pEma50Series = null;
+  var p2pBbUpperSeries = null;
+  var p2pBbLowerSeries = null;
+
   var p2pShowEma = true;
+  var p2pShowBb = false;
+  var p2pShowVol = true;
+  var p2pShowRsi = true;
   var p2pShowMarkers = true;
-  var p2pLiveSocket = null;
-  var p2pSimTimer = null;
+
+  var p2pCachedCandles = [];
+  var p2pCachedMarkers = [];
+  var p2pCurrentDecimals = 2;
+
+  var p2pDrawMode = 'none';
+  var p2pClickPt = null;
+  var p2pPriceLines = [];
+  var p2pDrawSeries = [];
+
+  var p2pPollTimer = null;
+  var p2pCountdownTimer = null;
 
   function setP2PBadge(text, isOk) {
     var el = document.getElementById('p2pChartStatus');
@@ -2553,269 +2607,427 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
     }
   }
 
-      function ensureLwcLoaded(callback) {
+  function ensureLwcLoaded(callback) {
     if (typeof LightweightCharts !== 'undefined') {
       callback();
       return;
     }
-    setP2PBadge('⏳ Loading Local Chart Engine...', true);
+    setP2PBadge('⏳ Loading Chart Engine...', true);
     var s = document.createElement('script');
     s.src = './lightweight-charts.standalone.production.js';
     s.onload = callback;
     s.onerror = function() {
-      setP2PBadge('❌ Check filename: lightweight-charts.standalone.production.js', false);
+      setP2PBadge('❌ Missing lightweight-charts.standalone.production.js', false);
     };
     document.head.appendChild(s);
   }
-  function initP2PTradingViewChart() {
-    var container = document.getElementById('p2pTvContainer');
-    if (!container || typeof LightweightCharts === 'undefined') return;
 
-    var w = container.clientWidth || 900;
-    if (w < 100) w = 900;
+  function startP2PCandleCountdown(tf) {
+    if (p2pCountdownTimer) clearInterval(p2pCountdownTimer);
+    var tfSecMap = { '1m': 60, '3m': 180, '5m': 300, '15m': 900, '30m': 1800, '1h': 3600, '4h': 14400, '1d': 86400 };
+    var period = tfSecMap[tf] || 900;
 
-    if (p2pChartObj) {
-      p2pChartObj.applyOptions({ width: w, height: 480 });
-      return;
-    }
-
-    p2pChartObj = LightweightCharts.createChart(container, {
-      width: w,
-      height: 480,
-      layout: {
-        background: { type: 'solid', color: '#050a08' },
-        textColor: '#94a3b8'
-      },
-      grid: {
-        vertLines: { color: '#0e1a15' },
-        horzLines: { color: '#0e1a15' }
-      },
-      crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-      rightPriceScale: { borderColor: '#172b23' },
-      timeScale: { borderColor: '#172b23', timeVisible: true, secondsVisible: false }
-    });
-
-    p2pCandleSeries = p2pChartObj.addCandlestickSeries({
-      upColor: '#00ff88',
-      downColor: '#ff2a5f',
-      borderUpColor: '#00ff88',
-      borderDownColor: '#ff2a5f',
-      wickUpColor: '#00ff88',
-      wickDownColor: '#ff2a5f'
-    });
-
-    p2pVolSeries = p2pChartObj.addHistogramSeries({
-      priceFormat: { type: 'volume' },
-      priceScaleId: ''
-    });
-    p2pChartObj.priceScale('').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
-
-    p2pEma20Series = p2pChartObj.addLineSeries({ color: '#38bdf8', lineWidth: 1.5, title: 'EMA 20' });
-    p2pEma50Series = p2pChartObj.addLineSeries({ color: '#f59e0b', lineWidth: 1.5, title: 'EMA 50' });
-
-    window.addEventListener('resize', function() {
-      if (p2pChartObj && container.clientWidth > 50) {
-        p2pChartObj.applyOptions({ width: container.clientWidth });
-      }
-    });
-  }
-
-  function calcEmaData(candles, period) {
-    var k = 2 / (period + 1);
-    var ema = candles.at(0).close;
-    return candles.map(function(c, i) {
-      ema = i === 0 ? c.close : (c.close * k + ema * (1 - k));
-      return { time: c.time, value: ema };
-    });
-  }
-
-  function toggleP2PEma() {
-    p2pShowEma = !p2pShowEma;
-    document.getElementById('p2pEmaToggle').className = p2pShowEma ? 'btn-g' : 'btn-o';
-    if (p2pEma20Series) p2pEma20Series.applyOptions({ visible: p2pShowEma });
-    if (p2pEma50Series) p2pEma50Series.applyOptions({ visible: p2pShowEma });
-  }
-
-  function toggleP2PMarkers() {
-    p2pShowMarkers = !p2pShowMarkers;
-    document.getElementById('p2pMarkerToggle').className = p2pShowMarkers ? 'btn-g' : 'btn-o';
-    loadP2PChart();
-  }
-
-  function buildFallbackCandles(sym, tf) {
-    var bases = { XAUUSD: 2650, EURUSD: 1.085, GBPUSD: 1.295, AUDUSD: 0.655, BTCUSD: 94500, ETHUSD: 3350, SOLUSD: 215, NIFTY: 24200, BANKNIFTY: 51800 };
-    var steps = { XAUUSD: 3.5, EURUSD: 0.0008, GBPUSD: 0.001, AUDUSD: 0.0007, BTCUSD: 240, ETHUSD: 18, SOLUSD: 2.2, NIFTY: 35, BANKNIFTY: 85 };
-    var tfSecs = { '1m': 60, '5m': 300, '15m': 900, '1h': 3600, '4h': 14400, '1d': 86400 };
-    var sec = tfSecs[tf] || 900;
-    var p = bases[sym] || 100;
-    var st = steps[sym] || 1;
-    var now = Math.floor(Date.now() / 1000);
-    var candles = [], volumes = [];
-    for (var i = 200; i >= 0; i--) {
-      var t = now - i * sec;
-      var o = p;
-      var c = +(o + (Math.random() - 0.49) * st * 2).toFixed(sym.indexOf('USD') === 3 ? 5 : 2);
-      var h = +(Math.max(o, c) + Math.random() * st).toFixed(sym.indexOf('USD') === 3 ? 5 : 2);
-      var l = +(Math.min(o, c) - Math.random() * st).toFixed(sym.indexOf('USD') === 3 ? 5 : 2);
-      candles.push({ time: t, open: o, high: h, low: l, close: c });
-      volumes.push({ time: t, value: Math.floor(150 + Math.random() * 800), color: c >= o ? 'rgba(0,255,136,0.22)' : 'rgba(255,42,95,0.22)' });
-      p = c;
-    }
-    return { candles: candles, volumes: volumes, step: st };
-  }
-
-        function loadP2PChart() {
-    ensureLwcLoaded(async function() {
-      initP2PTradingViewChart();
-      if (!p2pCandleSeries) return;
-
-      if (p2pLiveSocket) { p2pLiveSocket.close(); p2pLiveSocket = null; }
-      if (p2pSimTimer) { clearInterval(p2pSimTimer); p2pSimTimer = null; }
-
-      // 1. PASTE YOUR FREE TWELVE DATA API KEY BELOW:
-      var TWELVE_DATA_KEY = 'e8a3eab9e9ef4882ab3b1360e2f128d0';
-
-      var rawVal = document.getElementById('p2pChartSym').value.split('|');
-      var journalSym = rawVal.at(2);
-      var tf = document.getElementById('p2pChartTf').value;
-
-      setP2PBadge('⏳ Loading Spot ' + journalSym + '...', true);
-
-      var tdSymbolMap = {
-        XAUUSD: 'XAU/USD',
-        XAGUSD: 'XAG/USD',
-        USOIL: 'WTI/USD',
-        EURUSD: 'EUR/USD',
-        GBPUSD: 'GBP/USD',
-        USDJPY: 'USD/JPY',
-        AUDUSD: 'AUD/USD',
-        USDCAD: 'USD/CAD',
-        USDCHF: 'USD/CHF',
-        NZDUSD: 'NZD/USD',
-        GBPJPY: 'GBP/JPY',
-        EURJPY: 'EUR/JPY',
-        EURGBP: 'EUR/GBP',
-        USDINR: 'USD/INR',
-        BTCUSD: 'BTC/USD',
-        ETHUSD: 'ETH/USD',
-        SOLUSD: 'SOL/USD',
-        XRPUSD: 'XRP/USD',
-        SPX500: 'SPX',
-        NAS100: 'IXIC'
-      };
-
-      var tdTfMap = { '1m': '1min', '3m': '5min', '5m': '5min', '15m': '15min', '1h': '1h', '4h': '4h', '1d': '1day' };
-      var tdInterval = tdTfMap[tf] || '15min';
-
-      var decimals = (journalSym.indexOf('JPY') !== -1) ? 3 : (journalSym === 'XAUUSD' || journalSym === 'XAGUSD' || journalSym === 'USOIL' || journalSym === 'BTCUSD' || journalSym === 'ETHUSD' || journalSym === 'SPX500' || journalSym === 'NAS100') ? 2 : 5;
-
-      p2pCandleSeries.applyOptions({
-        priceFormat: { type: 'price', precision: decimals, minMove: Number((1 / Math.pow(10, decimals)).toFixed(decimals)) }
-      });
-
-      var candles = [];
-      var volumes = [];
-      var feedLabel = 'TWELVE DATA SPOT';
-
-      try {
-        var tdSym = tdSymbolMap[journalSym];
-        if (tdSym && TWELVE_DATA_KEY && TWELVE_DATA_KEY !== 'PASTE_YOUR_TWELVE_DATA_API_KEY_HERE') {
-          var tdHost = 'api.twelve' + 'data.com';
-          var tdUrl = 'https://' + tdHost + '/time_series?symbol=' + encodeURIComponent(tdSym) + '&interval=' + tdInterval + '&outputsize=250&timezone=UTC&apikey=' + TWELVE_DATA_KEY;
-          var res = await fetch(tdUrl);
-          var data = await res.json();
-
-          if (data && Array.isArray(data.values) && data.values.length) {
-            data.values.reverse().forEach(function(bar) {
-              var t = Math.floor(new Date(bar.datetime.replace(' ', 'T') + 'Z').getTime() / 1000);
-              var o = +parseFloat(bar.open).toFixed(decimals);
-              var h = +parseFloat(bar.high).toFixed(decimals);
-              var l = +parseFloat(bar.low).toFixed(decimals);
-              var c = +parseFloat(bar.close).toFixed(decimals);
-              var v = parseFloat(bar.volume) || 100;
-              candles.push({ time: t, open: o, high: h, low: l, close: c });
-              volumes.push({ time: t, value: v, color: c >= o ? 'rgba(0,255,136,0.22)' : 'rgba(255,42,95,0.22)' });
-            });
-          }
-        }
-      } catch (e) {}
-
-      // Fallback to Coinbase / Frankfurter if Twelve Data key is missing or daily quota reached
-      if (!candles.length) {
-        feedLabel = 'BACKUP FEED';
-        var cbMap = { XAUUSD: 'PAXG-USD', BTCUSD: 'BTC-USD', ETHUSD: 'ETH-USD', SOLUSD: 'SOL-USD', XRPUSD: 'XRP-USD', EURUSD: 'EUR-USD', GBPUSD: 'GBP-USD' };
-        var granMap = { '1m': 60, '3m': 300, '5m': 300, '15m': 900, '1h': 3600, '4h': 21600, '1d': 86400 };
-        if (cbMap[journalSym]) {
-          var cbHost = 'api.exchange.' + 'coinbase.com';
-          var cbRes = await fetch('https://' + cbHost + '/products/' + cbMap[journalSym] + '/candles?granularity=' + (granMap[tf] || 900));
-          var rows = await cbRes.json();
-          if (Array.isArray(rows)) {
-            rows.reverse().forEach(function(k) {
-              var t = k.at(0), l = +Number(k.at(1)).toFixed(decimals), h = +Number(k.at(2)).toFixed(decimals), o = +Number(k.at(3)).toFixed(decimals), c = +Number(k.at(4)).toFixed(decimals);
-              candles.push({ time: t, open: o, high: h, low: l, close: c });
-              volumes.push({ time: t, value: Number(k.at(5)) || 10, color: c >= o ? 'rgba(0,255,136,0.22)' : 'rgba(255,42,95,0.22)' });
-            });
-          }
-        }
-      }
-
-      if (!candles.length) {
-        setP2PBadge('⚠️ Check API Key or Try Another Pair', false);
-        return;
-      }
-
-      p2pCandleSeries.setData(candles);
-      p2pVolSeries.setData(volumes);
-      p2pEma20Series.setData(calcEmaData(candles, 20));
-      p2pEma50Series.setData(calcEmaData(candles, 50));
-
-      var markers = [];
-      if (p2pShowMarkers && typeof trades !== 'undefined' && Array.isArray(trades)) {
-        trades.forEach(function(tr) {
-          if ((tr.sym || '').toUpperCase().indexOf(journalSym) !== -1 && tr.dat) {
-            var trSec = Math.floor(new Date(tr.dat + 'T12:00:00Z').getTime() / 1000);
-            var closest = candles.reduce(function(prev, curr) {
-              return Math.abs(curr.time - trSec) < Math.abs(prev.time - trSec) ? curr : prev;
-            });
-            var isLong = (tr.side || '').toLowerCase() === 'long';
-            markers.push({
-              time: closest.time,
-              position: isLong ? 'belowBar' : 'aboveBar',
-              color: isLong ? '#00ff88' : '#ff2a5f',
-              shape: isLong ? 'arrowUp' : 'arrowDown',
-              text: (isLong ? 'LONG ' : 'SHORT ') + (tr.pnl >= 0 ? '+$' + tr.pnl : '-$' + Math.abs(tr.pnl))
-            });
-          }
-        });
-        markers.sort(function(a, b) { return a.time - b.time; });
-      }
-      p2pCandleSeries.setMarkers(markers);
-      p2pChartObj.timeScale().fitContent();
-
-      var livePrice = candles.at(candles.length - 1).close.toFixed(decimals);
-      setP2PBadge('● ' + feedLabel + ' | ' + journalSym + ': ' + livePrice, true);
-
-      // Refresh Spot Price Every 15 Seconds (Stays Safely Inside Free 800 Credits/Day Limit)
-      if (tdSymbolMap[journalSym] && TWELVE_DATA_KEY !== 'PASTE_YOUR_TWELVE_DATA_API_KEY_HERE') {
-        p2pSimTimer = setInterval(async function() {
-          try {
-            var qHost = 'api.twelve' + 'data.com';
-            var qRes = await fetch('https://' + qHost + '/price?symbol=' + encodeURIComponent(tdSymbolMap[journalSym]) + '&apikey=' + TWELVE_DATA_KEY);
-            var qData = await qRes.json();
-            if (qData && qData.price) {
-              var pNow = +parseFloat(qData.price).toFixed(decimals);
-              var lastBar = candles.at(candles.length - 1);
-              lastBar.close = pNow;
-              if (pNow > lastBar.high) lastBar.high = pNow;
-              if (pNow < lastBar.low) lastBar.low = pNow;
-              p2pCandleSeries.update(lastBar);
-              setP2PBadge('● SPOT ' + journalSym + ': ' + pNow.toFixed(decimals), true);
-            }
-          } catch (err) {}
-        }, 15000);
-      }
-    });
-  }
+    function tickTimer() {
+      var nowSec = Math.floor(Date.now() / 1000);
+      var rem = period - (nowSec % period);
+      var h = Math.floor(rem / 3600);
+      var m = Math.floor((rem % 3600) / 60);
+      var s = rem % 60;
+      var txt = (h > 0 ? (h < 10 ? '0' + h : h) + ':' : '') + (m < 10 ? '0' + m : m) + ':' + (s < 10 ? '0' + s : s);
+var cdEl = document.getElementById('p2pBarCountdown');
+var axisEl = document.getElementById('p2pAxisCountdownBox');
+if (cdEl) cdEl.textContent = '⏱ ' + txt;
+if (axisEl) axisEl.textContent = 'Bar Close: ' + txt;
+}
+tickTimer();
+p2pCountdownTimer = setInterval(tickTimer, 1000);
+}
+function initP2PTradingViewChart() {
+var container = document.getElementById('p2pTvContainer');
+var rsiContainer = document.getElementById('p2pRsiContainer');
+if (!container || typeof LightweightCharts === 'undefined') return;
+var w = container.clientWidth || 900;
+if (w < 100) w = 900;
+if (p2pChartObj) {
+p2pChartObj.applyOptions({ width: w, height: 440 });
+if (p2pRsiChartObj) p2pRsiChartObj.applyOptions({ width: w, height: 110 });
+return;
+}
+var commonOpts = {
+width: w,
+layout: { background: { type: 'solid', color: '#050a08' }, textColor: '#94a3b8' },
+grid: { vertLines: { color: '#0e1a15' }, horzLines: { color: '#0e1a15' } },
+crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+rightPriceScale: { borderColor: '#172b23', minimumWidth: 78 },
+timeScale: { borderColor: '#172b23', timeVisible: true, secondsVisible: false }
+};
+p2pChartObj = LightweightCharts.createChart(container, Object.assign({}, commonOpts, {
+height: 440,
+localization: {
+timeFormatter: function(ts) {
+return new Date(ts * 1000).toLocaleString('en-IN', {
+timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false
+}) + ' IST';
+}
+}
+}));
+p2pVolSeries = p2pChartObj.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: '' });
+p2pChartObj.priceScale('').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+p2pEma20Series = p2pChartObj.addLineSeries({ color: '#38bdf8', lineWidth: 1.5, title: 'EMA 20' });
+p2pEma50Series = p2pChartObj.addLineSeries({ color: '#f59e0b', lineWidth: 1.5, title: 'EMA 50' });
+p2pBbUpperSeries = p2pChartObj.addLineSeries({ color: 'rgba(168,85,247,0.75)', lineWidth: 1.2, visible: false, title: 'BB Upper' });
+p2pBbLowerSeries = p2pChartObj.addLineSeries({ color: 'rgba(168,85,247,0.75)', lineWidth: 1.2, visible: false, title: 'BB Lower' });
+// Lower RSI(14) Sub-Pane Chart
+if (rsiContainer) {
+p2pRsiChartObj = LightweightCharts.createChart(rsiContainer, Object.assign({}, commonOpts, { height: 110 }));
+p2pRsiSeries = p2pRsiChartObj.addLineSeries({ color: '#a855f7', lineWidth: 1.6, title: 'RSI 14' });
+p2pRsiSeries.createPriceLine({ price: 70, color: 'rgba(255,42,95,0.45)', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '' });
+p2pRsiSeries.createPriceLine({ price: 30, color: 'rgba(0,255,136,0.45)', lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: '' });
+// Sync horizontal zoom & scroll between main chart and RSI pane
+p2pChartObj.timeScale().subscribeVisibleLogicalRangeChange(function(range) {
+if (range && p2pRsiChartObj) p2pRsiChartObj.timeScale().setVisibleLogicalRange(range);
+});
+p2pRsiChartObj.timeScale().subscribeVisibleLogicalRangeChange(function(range) {
+if (range && p2pChartObj) p2pChartObj.timeScale().setVisibleLogicalRange(range);
+});
+}
+p2pChartObj.subscribeCrosshairMove(function(param) {
+if (!param || !param.time || !p2pMainSeries) return;
+var bar = param.seriesData.get(p2pMainSeries);
+if (bar) {
+var val = bar.close !== undefined ? bar.close : bar.value;
+document.getElementById('p2pLgO').textContent = (bar.open !== undefined ? bar.open : val).toFixed(p2pCurrentDecimals);
+document.getElementById('p2pLgH').textContent = (bar.high !== undefined ? bar.high : val).toFixed(p2pCurrentDecimals);
+document.getElementById('p2pLgL').textContent = (bar.low !== undefined ? bar.low : val).toFixed(p2pCurrentDecimals);
+document.getElementById('p2pLgC').textContent = val.toFixed(p2pCurrentDecimals);
+}
+});
+// Interactive Drawing Tools (H-Line, Trendline, Fibonacci Retracement)
+p2pChartObj.subscribeClick(function(param) {
+if (p2pDrawMode === 'none' || !param || !param.point || !p2pMainSeries) return;
+var price = p2pMainSeries.coordinateToPrice(param.point.y);
+if (price === null || isNaN(price)) return;
+if (p2pDrawMode === 'hline') {
+var ln = p2pMainSeries.createPriceLine({
+price: +price.toFixed(p2pCurrentDecimals),
+color: '#38bdf8',
+lineWidth: 2,
+lineStyle: LightweightCharts.LineStyle.Dashed,
+axisLabelVisible: true,
+title: 'S/R'
+});
+p2pPriceLines.push(ln);
+} else if (p2pDrawMode === 'trend' && param.time) {
+if (!p2pClickPt) {
+p2pClickPt = { time: param.time, value: +price.toFixed(p2pCurrentDecimals) };
+document.getElementById('p2pDrawHint').textContent = '╱ First point locked — click second point on chart!';
+} else {
+var pts = [p2pClickPt, { time: param.time, value: +price.toFixed(p2pCurrentDecimals) }];
+pts.sort(function(a, b) { return a.time - b.time; });
+if (pts.at(0).time !== pts.at(1).time) {
+var s = p2pChartObj.addLineSeries({ color: '#a855f7', lineWidth: 2, lastValueVisible: false, priceLineVisible: false });
+s.setData(pts);
+p2pDrawSeries.push(s);
+}
+p2pClickPt = null;
+setP2PDrawMode('none', document.getElementById('p2pDrawNone'));
+}
+} else if (p2pDrawMode === 'fib') {
+if (!p2pClickPt) {
+p2pClickPt = { value: price };
+document.getElementById('p2pDrawHint').textContent = '📐 Swing 1 locked — click Swing 2 to plot Fibonacci levels!';
+} else {
+var p1 = p2pClickPt.value, p2 = price;
+var fibs = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+var cols = ['#94a3b8', '#ef4444', '#f59e0b', '#10b981', '#00ff88', '#38bdf8', '#94a3b8'];
+fibs.forEach(function(lvl, idx) {
+var fp = +(p1 + (p2 - p1) * lvl).toFixed(p2pCurrentDecimals);
+var fl = p2pMainSeries.createPriceLine({
+price: fp,
+color: cols.at(idx),
+lineWidth: (lvl === 0.5 || lvl === 0.618) ? 2 : 1,
+lineStyle: LightweightCharts.LineStyle.Dotted,
+axisLabelVisible: true,
+title: 'Fib ' + lvl
+});
+p2pPriceLines.push(fl);
+});
+p2pClickPt = null;
+setP2PDrawMode('none', document.getElementById('p2pDrawNone'));
+}
+}
+});
+window.addEventListener('resize', function() {
+if (p2pChartObj && container.clientWidth > 50) {
+p2pChartObj.applyOptions({ width: container.clientWidth });
+if (p2pRsiChartObj) p2pRsiChartObj.applyOptions({ width: container.clientWidth });
+}
+});
+}
+function applyP2PChartStyle() {
+if (!p2pChartObj || !p2pCachedCandles.length) return;
+if (p2pMainSeries) {
+p2pChartObj.removeSeries(p2pMainSeries);
+p2pMainSeries = null;
+}
+var style = document.getElementById('p2pChartStyle').value;
+var fmt = { type: 'price', precision: p2pCurrentDecimals, minMove: Number((1 / Math.pow(10, p2pCurrentDecimals)).toFixed(p2pCurrentDecimals)) };
+if (style === 'candles') {
+p2pMainSeries = p2pChartObj.addCandlestickSeries({
+upColor: '#00ff88', downColor: '#ff2a5f', borderUpColor: '#00ff88', borderDownColor: '#ff2a5f', wickUpColor: '#00ff88', wickDownColor: '#ff2a5f', priceFormat: fmt
+});
+p2pMainSeries.setData(p2pCachedCandles);
+} else if (style === 'hollow') {
+p2pMainSeries = p2pChartObj.addCandlestickSeries({
+upColor: 'transparent', downColor: '#ff2a5f', borderUpColor: '#00ff88', borderDownColor: '#ff2a5f', wickUpColor: '#00ff88', wickDownColor: '#ff2a5f', priceFormat: fmt
+});
+p2pMainSeries.setData(p2pCachedCandles);
+} else if (style === 'bars') {
+p2pMainSeries = p2pChartObj.addBarSeries({ upColor: '#00ff88', downColor: '#ff2a5f', priceFormat: fmt });
+p2pMainSeries.setData(p2pCachedCandles);
+} else if (style === 'line') {
+p2pMainSeries = p2pChartObj.addLineSeries({ color: '#00ff88', lineWidth: 2, priceFormat: fmt });
+p2pMainSeries.setData(p2pCachedCandles.map(function(c) { return { time: c.time, value: c.close }; }));
+} else if (style === 'area') {
+p2pMainSeries = p2pChartObj.addAreaSeries({
+lineColor: '#00ff88', topColor: 'rgba(0,255,136,0.28)', bottomColor: 'rgba(0,255,136,0.02)', lineWidth: 2, priceFormat: fmt
+});
+p2pMainSeries.setData(p2pCachedCandles.map(function(c) { return { time: c.time, value: c.close }; }));
+}
+if (p2pMainSeries && p2pShowMarkers) p2pMainSeries.setMarkers(p2pCachedMarkers);
+}
+function calcEmaData(candles, period) {
+var k = 2 / (period + 1);
+var ema = candles.at(0).close;
+return candles.map(function(c, i) {
+ema = i === 0 ? c.close : (c.close * k + ema * (1 - k));
+return { time: c.time, value: ema };
+});
+}
+function calcBollingerData(candles, period, mult) {
+var up = [], lo = [];
+for (var i = 0; i < candles.length; i++) {
+var slice = candles.slice(Math.max(0, i - period + 1), i + 1);
+var mean = slice.reduce(function(s, x) { return s + x.close; }, 0) / slice.length;
+var std = Math.sqrt(slice.reduce(function(s, x) { return s + Math.pow(x.close - mean, 2); }, 0) / slice.length);
+up.push({ time: candles.at(i).time, value: mean + mult * std });
+lo.push({ time: candles.at(i).time, value: mean - mult * std });
+}
+return { upper: up, lower: lo };
+}
+function calcRsiSeriesData(candles, period) {
+var out = [];
+for (var i = 0; i < candles.length; i++) {
+if (i < period) { out.push({ time: candles.at(i).time, value: 50 }); continue; }
+var gains = 0, losses = 0;
+for (var j = i - period + 1; j <= i; j++) {
+var diff = candles.at(j).close - candles.at(j - 1).close;
+if (diff >= 0) gains += diff; else losses -= diff;
+}
+var rs = losses === 0 ? 100 : (gains / losses);
+out.push({ time: candles.at(i).time, value: +(100 - (100 / (1 + rs))).toFixed(2) });
+}
+return out;
+}
+function toggleP2PEma() {
+p2pShowEma = !p2pShowEma;
+document.getElementById('p2pEmaToggle').className = p2pShowEma ? 'btn-g' : 'btn-o';
+if (p2pEma20Series) p2pEma20Series.applyOptions({ visible: p2pShowEma });
+if (p2pEma50Series) p2pEma50Series.applyOptions({ visible: p2pShowEma });
+}
+function toggleP2PBb() {
+p2pShowBb = !p2pShowBb;
+document.getElementById('p2pBbToggle').className = p2pShowBb ? 'btn-g' : 'btn-o';
+if (p2pBbUpperSeries) p2pBbUpperSeries.applyOptions({ visible: p2pShowBb });
+if (p2pBbLowerSeries) p2pBbLowerSeries.applyOptions({ visible: p2pShowBb });
+}
+function toggleP2PVol() {
+p2pShowVol = !p2pShowVol;
+document.getElementById('p2pVolToggle').className = p2pShowVol ? 'btn-g' : 'btn-o';
+if (p2pVolSeries) p2pVolSeries.applyOptions({ visible: p2pShowVol });
+}
+function toggleP2PRsi() {
+p2pShowRsi = !p2pShowRsi;
+document.getElementById('p2pRsiToggle').className = p2pShowRsi ? 'btn-g' : 'btn-o';
+var rc = document.getElementById('p2pRsiContainer');
+if (rc) rc.style.display = p2pShowRsi ? 'block' : 'none';
+}
+function toggleP2PMarkers() {
+p2pShowMarkers = !p2pShowMarkers;
+document.getElementById('p2pMarkerToggle').className = p2pShowMarkers ? 'btn-g' : 'btn-o';
+if (p2pMainSeries) p2pMainSeries.setMarkers(p2pShowMarkers ? p2pCachedMarkers : []);
+}
+function setP2PDrawMode(mode, btn) {
+p2pDrawMode = mode;
+p2pClickPt = null;
+['p2pDrawNone', 'p2pDrawHline', 'p2pDrawTrend', 'p2pDrawFib'].forEach(function(id) {
+var el = document.getElementById(id);
+if (el) el.className = 'btn-o';
+});
+if (btn) btn.className = 'btn-g';
+var hints = {
+none: 'Timezone: IST (UTC+5:30) • Scroll to zoom, drag to pan, double-click axis to reset.',
+hline: '— Horizontal Line Mode: Click anywhere on the chart to place a Support/Resistance line.',
+trend: '╱ Trendline Mode: Click swing point 1, then click swing point 2.',
+fib: '📐 Fibonacci Mode: Click Swing High/Low 1, then click Swing 2.'
+};
+document.getElementById('p2pDrawHint').textContent = hints[mode] || '';
+}
+function clearP2PDrawings() {
+if (p2pMainSeries) {
+p2pPriceLines.forEach(function(ln) { try { p2pMainSeries.removePriceLine(ln); } catch (e) {} });
+}
+p2pPriceLines = [];
+if (p2pChartObj) {
+p2pDrawSeries.forEach(function(s) { try { p2pChartObj.removeSeries(s); } catch (e) {} });
+}
+p2pDrawSeries = [];
+setP2PDrawMode('none', document.getElementById('p2pDrawNone'));
+}
+function takeP2PSnapshot() {
+if (!p2pChartObj) return;
+var canvas = p2pChartObj.takeScreenshot();
+var link = document.createElement('a');
+link.download = 'P2P-Fx-Trading-Chart-' + Date.now() + '.png';
+link.href = canvas.toDataURL('image/png');
+link.click();
+}
+function toggleP2PFullscreen() {
+var card = document.getElementById('p2pChartCard');
+if (!card) return;
+if (!document.fullscreenElement) {
+card.requestFullscreen().catch(function() {});
+} else {
+document.exitFullscreen().catch(function() {});
+}
+}
+function loadP2PChart() {
+ensureLwcLoaded(async function() {
+initP2PTradingViewChart();
+if (!p2pChartObj) return;
+if (p2pPollTimer) { clearInterval(p2pPollTimer); p2pPollTimer = null; }
+var TWELVE_DATA_KEY = 'e8a3eab9e9ef4882ab3b1360e2f128d0';
+var rawVal = document.getElementById('p2pChartSym').value.split('|');
+var journalSym = rawVal.at(2);
+var tf = document.getElementById('p2pChartTf').value;
+startP2PCandleCountdown(tf);
+setP2PBadge('⏳ Loading Spot ' + journalSym + '...', true);
+var tdSymbolMap = {
+XAUUSD: 'XAU/USD', XAGUSD: 'XAG/USD', USOIL: 'WTI/USD',
+EURUSD: 'EUR/USD', GBPUSD: 'GBP/USD', USDJPY: 'USD/JPY', AUDUSD: 'AUD/USD',
+USDCAD: 'USD/CAD', USDCHF: 'USD/CHF', NZDUSD: 'NZD/USD',
+GBPJPY: 'GBP/JPY', EURJPY: 'EUR/JPY', EURGBP: 'EUR/GBP', USDINR: 'USD/INR',
+BTCUSD: 'BTC/USD', ETHUSD: 'ETH/USD', SOLUSD: 'SOL/USD', XRPUSD: 'XRP/USD',
+SPX500: 'SPX', NAS100: 'IXIC'
+};
+var tdTfMap = { '1m': '1min', '3m': '5min', '5m': '5min', '15m': '15min', '30m': '30min', '1h': '1h', '4h': '4h', '1d': '1day' };
+var tdInterval = tdTfMap[tf] || '15min';
+p2pCurrentDecimals = (journalSym.indexOf('JPY') !== -1) ? 3
+: (journalSym === 'XAUUSD' || journalSym === 'XAGUSD' || journalSym === 'USOIL' || journalSym === 'BTCUSD' || journalSym === 'ETHUSD' || journalSym === 'SPX500' || journalSym === 'NAS100') ? 2 : 5;
+var candles = [];
+var volumes = [];
+var feedLabel = 'SPOT';
+try {
+var tdSym = tdSymbolMap[journalSym];
+if (tdSym && TWELVE_DATA_KEY) {
+var tdHost = 'api.twelve' + 'data.com';
+var tdUrl = 'https://' + tdHost + '/time_series?symbol=' + encodeURIComponent(tdSym) + '&interval=' + tdInterval + '&outputsize=250&timezone=UTC&apikey=' + TWELVE_DATA_KEY;
+var res = await fetch(tdUrl);
+var data = await res.json();
+if (data && Array.isArray(data.values) && data.values.length) {
+data.values.reverse().forEach(function(bar) {
+var t = Math.floor(new Date(bar.datetime.replace(' ', 'T') + 'Z').getTime() / 1000);
+var o = +parseFloat(bar.open).toFixed(p2pCurrentDecimals);
+var h = +parseFloat(bar.high).toFixed(p2pCurrentDecimals);
+var l = +parseFloat(bar.low).toFixed(p2pCurrentDecimals);
+var c = +parseFloat(bar.close).toFixed(p2pCurrentDecimals);
+var v = parseFloat(bar.volume) || 120;
+candles.push({ time: t, open: o, high: h, low: l, close: c });
+volumes.push({ time: t, value: v, color: c >= o ? 'rgba(0,255,136,0.22)' : 'rgba(255,42,95,0.22)' });
+});
+}
+}
+} catch (e) {}
+if (!candles.length) {
+feedLabel = 'BACKUP';
+var cbMap = { XAUUSD: 'PAXG-USD', BTCUSD: 'BTC-USD', ETHUSD: 'ETH-USD', SOLUSD: 'SOL-USD', XRPUSD: 'XRP-USD', EURUSD: 'EUR-USD', GBPUSD: 'GBP-USD' };
+var granMap = { '1m': 60, '3m': 300, '5m': 300, '15m': 900, '30m': 1800, '1h': 3600, '4h': 21600, '1d': 86400 };
+if (cbMap[journalSym]) {
+var cbHost = 'api.exchange.' + 'coinbase.com';
+var cbRes = await fetch('https://' + cbHost + '/products/' + cbMap[journalSym] + '/candles?granularity=' + (granMap[tf] || 900));
+var rows = await cbRes.json();
+if (Array.isArray(rows)) {
+rows.reverse().forEach(function(k) {
+var t = k.at(0), l = +Number(k.at(1)).toFixed(p2pCurrentDecimals), h = +Number(k.at(2)).toFixed(p2pCurrentDecimals), o = +Number(k.at(3)).toFixed(p2pCurrentDecimals), c = +Number(k.at(4)).toFixed(p2pCurrentDecimals);
+candles.push({ time: t, open: o, high: h, low: l, close: c });
+volumes.push({ time: t, value: Number(k.at(5)) || 10, color: c >= o ? 'rgba(0,255,136,0.22)' : 'rgba(255,42,95,0.22)' });
+});
+}
+}
+}
+if (!candles.length) {
+setP2PBadge('⚠️ Feed Busy — Try Another Pair', false);
+return;
+}
+p2pCachedCandles = candles;
+var markers = [];
+if (typeof trades !== 'undefined' && Array.isArray(trades)) {
+trades.forEach(function(tr) {
+if ((tr.sym || '').toUpperCase().indexOf(journalSym) !== -1 && tr.dat) {
+var trSec = Math.floor(new Date(tr.dat + 'T12:00:00Z').getTime() / 1000);
+var closest = candles.reduce(function(prev, curr) {
+return Math.abs(curr.time - trSec) < Math.abs(prev.time - trSec) ? curr : prev;
+});
+var isLong = (tr.side || '').toLowerCase() === 'long';
+markers.push({
+time: closest.time,
+position: isLong ? 'belowBar' : 'aboveBar',
+color: isLong ? '#00ff88' : '#ff2a5f',
+shape: isLong ? 'arrowUp' : 'arrowDown',
+text: (isLong ? 'LONG ' : 'SHORT ') + (tr.pnl >= 0 ? '+$' + tr.pnl : '-$' + Math.abs(tr.pnl))
+});
+}
+});
+markers.sort(function(a, b) { return a.time - b.time; });
+}
+p2pCachedMarkers = markers;
+applyP2PChartStyle();
+p2pVolSeries.setData(volumes);
+p2pEma20Series.setData(calcEmaData(candles, 20));
+p2pEma50Series.setData(calcEmaData(candles, 50));
+var bb = calcBollingerData(candles, 20, 2);
+p2pBbUpperSeries.setData(bb.upper);
+p2pBbLowerSeries.setData(bb.lower);
+if (p2pRsiSeries) p2pRsiSeries.setData(calcRsiSeriesData(candles, 14));
+p2pChartObj.timeScale().fitContent();
+if (p2pRsiChartObj) p2pRsiChartObj.timeScale().fitContent();
+var lastBar = candles.at(candles.length - 1);
+setP2PBadge('● ' + feedLabel + ' ' + journalSym + ': ' + lastBar.close.toFixed(p2pCurrentDecimals), true);
+if (tdSymbolMap[journalSym] && TWELVE_DATA_KEY) {
+p2pPollTimer = setInterval(async function() {
+try {
+var qHost = 'api.twelve' + 'data.com';
+var qRes = await fetch('https://' + qHost + '/price?symbol=' + encodeURIComponent(tdSymbolMap[journalSym]) + '&apikey=' + TWELVE_DATA_KEY);
+var qData = await qRes.json();
+if (qData && qData.price && p2pMainSeries && p2pCachedCandles.length) {
+var pNow = +parseFloat(qData.price).toFixed(p2pCurrentDecimals);
+var curBar = p2pCachedCandles.at(p2pCachedCandles.length - 1);
+curBar.close = pNow;
+if (pNow > curBar.high) curBar.high = pNow;
+if (pNow < curBar.low) curBar.low = pNow;
+var st = document.getElementById('p2pChartStyle').value;
+if (st === 'line' || st === 'area') {
+p2pMainSeries.update({ time: curBar.time, value: pNow });
+} else {
+p2pMainSeries.update(curBar);
+}
+setP2PBadge('● SPOT ' + journalSym + ': ' + pNow.toFixed(p2pCurrentDecimals), true);
+}
+} catch (err) {}
+}, 12000);
+}
+});
+}
 </script>
   </main>
 </div>
