@@ -2539,34 +2539,20 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
     }
   }
 
-    function ensureLwcLoaded(callback) {
+      function ensureLwcLoaded(callback) {
     if (typeof LightweightCharts !== 'undefined') {
       callback();
       return;
     }
-    setP2PBadge('⏳ Loading Chart Library...', true);
-    var mirrors = [
-      'https://cloudflare.com',
-      'https://unpkg.com',
-      'https://jsdelivr.net',
-      'https://esm.sh'
-    ];
-    var i = 0;
-    function loadMirror() {
-      if (i >= mirrors.length) {
-        setP2PBadge('❌ Network blocked all CDNs — host .js file in GitHub repo', false);
-        return;
-      }
-      var s = document.createElement('script');
-      s.src = mirrors[i++];
-      s.onload = callback;
-      s.onerror = loadMirror;
-      document.head.appendChild(s);
-    }
-    loadMirror();
+    setP2PBadge('⏳ Loading Local Chart Engine...', true);
+    var s = document.createElement('script');
+    s.src = './lightweight-charts.standalone.production.js';
+    s.onload = callback;
+    s.onerror = function() {
+      setP2PBadge('❌ Check filename: lightweight-charts.standalone.production.js', false);
+    };
+    document.head.appendChild(s);
   }
-
-
   function initP2PTradingViewChart() {
     var container = document.getElementById('p2pTvContainer');
     if (!container || typeof LightweightCharts === 'undefined') return;
