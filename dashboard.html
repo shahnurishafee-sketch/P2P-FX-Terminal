@@ -2520,6 +2520,7 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
 
 <!-- Load Official TradingView Lightweight Charts Library -->
 <script src="https://unpkg.com"></script>
+<script id="tvLwcLoader"></script>
 <script>
   var p2pChartObj = null;
   var p2pCandleSeries = null;
@@ -2529,6 +2530,17 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
   var p2pShowEma = true;
   var p2pShowMarkers = true;
   var p2pLiveSocket = null;
+
+  function ensureLwcLoaded(callback) {
+    if (typeof LightweightCharts !== 'undefined') {
+      callback();
+      return;
+    }
+    var s = document.createElement('script');
+    s.src = ['https://', '://unpkg.com', 'lightweight-charts@4.2.1/', 'dist/lightweight-charts.standalone.production.js'].join('');
+    s.onload = callback;
+    document.head.appendChild(s);
+  }
 
   function initP2PTradingViewChart() {
     var container = document.getElementById('p2pTvContainer');
@@ -2597,106 +2609,111 @@ if (!demoTickTimer) demoTickTimer = setInterval(tickDemoMarket, 1000);
     loadP2PChart();
   }
 
-  async function loadP2PChart() {
-    initP2PTradingViewChart();
-    var container = document.getElementById('p2pTvContainer');
-    if (p2pChartObj && container && container.clientWidth > 0) {
-      p2pChartObj.applyOptions({ width: container.clientWidth });
-    }
-    if (!p2pCandleSeries) return;
+  function loadP2PChart() {
+    ensureLwcLoaded(async function() {
+      initP2PTradingViewChart();
+      var container = document.getElementById('p2pTvContainer');
+      if (p2pChartObj && container && container.clientWidth > 0) {
+        p2pChartObj.applyOptions({ width: container.clientWidth });
+      }
+      if (!p2pCandleSeries) return;
 
-    if (p2pLiveSocket) {
-      p2pLiveSocket.close();
-      p2pLiveSocket = null;
-    }
-
-    var rawVal = document.getElementById('p2pChartSym').value.split('|');
-    var apiSym = rawVal.at(0);
-    var source = rawVal.at(1);
-    var journalSym = rawVal.at(2);
-    var tf = document.getElementById('p2pChartTf').value;
-    var statusEl = document.getElementById('p2pChartStatus');
-
-    statusEl.textContent = '⏳ Loading ' + journalSym + '...';
-    var candles = [];
-    var volumes = [];
-
-    try {
-      if (source === 'binance') {
-        var res = await fetch('https://binance.com' + apiSym + '&interval=' + tf + '&limit=300');
-        var data = await res.json();
-        data.forEach(function(k) {
-          var t = Math.floor(k.at(0) / 1000);
-          var o = parseFloat(k.at(1)), h = parseFloat(k.at(2)), l = parseFloat(k.at(3)), c = parseFloat(k.at(4)), v = parseFloat(k.at(5));
-          candles.push({ time: t, open: o, high: h, low: l, close: c });
-          volumes.push({ time: t, value: v, color: c >= o ? 'rgba(0,255,136,0.22)' : 'rgba(255,42,95,0.22)' });
-        });
-
-        p2pLiveSocket = new WebSocket('wss://://binance.com' + apiSym.toLowerCase() + '@kline_' + tf);
-        p2pLiveSocket.onmessage = function(evt) {
-          var msg = JSON.parse(evt.data);
-          if (msg.k) {
-            p2pCandleSeries.update({
-              time: Math.floor(msg.k.t / 1000),
-              open: parseFloat(msg.k.o),
-              high: parseFloat(msg.k.h),
-              low: parseFloat(msg.k.l),
-              close: parseFloat(msg.k.c)
-            });
-          }
-        };
-        statusEl.textContent = '● LIVE STREAM (' + journalSym + ')';
-        statusEl.className = 'tag-g';
-      } else if (source === 'yahoo') {
-        var yRange = (tf === '1d') ? '1y' : '30d';
-        var yUrl = 'https://yahoo.com' + apiSym + '?range=' + yRange + '&interval=' + tf;
-        var yRes = await fetch('https://corsproxy.io?' + encodeURIComponent(yUrl));
-        var yJson = await yRes.json();
-        var r = yJson.chart.result.at(0);
-        var q = r.indicators.quote.at(0);
-        for (var i = 0; i < r.timestamp.length; i++) {
-          if (q.open.at(i) == null || q.close.at(i) == null) continue;
-          var yt = r.timestamp.at(i);
-          candles.push({ time: yt, open: q.open.at(i), high: q.high.at(i), low: q.low.at(i), close: q.close.at(i) });
-          volumes.push({ time: yt, value: q.volume.at(i) || 100, color: q.close.at(i) >= q.open.at(i) ? 'rgba(0,255,136,0.22)' : 'rgba(255,42,95,0.22)' });
-        }
-        statusEl.textContent = '● NSE MARKET FEED (' + journalSym + ')';
-        statusEl.className = 'tag-g';
+      if (p2pLiveSocket) {
+        p2pLiveSocket.close();
+        p2pLiveSocket = null;
       }
 
-      if (candles.length) {
-        p2pCandleSeries.setData(candles);
-        p2pVolSeries.setData(volumes);
-        p2pEma20Series.setData(calcEmaData(candles, 20));
-        p2pEma50Series.setData(calcEmaData(candles, 50));
+      var rawVal = document.getElementById('p2pChartSym').value.split('|');
+      var apiSym = rawVal.at(0);
+      var source = rawVal.at(1);
+      var journalSym = rawVal.at(2);
+      var tf = document.getElementById('p2pChartTf').value;
+      var statusEl = document.getElementById('p2pChartStatus');
 
-        var markers = [];
-        if (p2pShowMarkers && typeof trades !== 'undefined' && Array.isArray(trades)) {
-          trades.forEach(function(tr) {
-            if ((tr.sym || '').toUpperCase().indexOf(journalSym) !== -1 && tr.dat) {
-              var trSec = Math.floor(new Date(tr.dat + 'T12:00:00Z').getTime() / 1000);
-              var closest = candles.reduce(function(prev, curr) {
-                return Math.abs(curr.time - trSec) < Math.abs(prev.time - trSec) ? curr : prev;
-              });
-              var isLong = (tr.side || '').toLowerCase() === 'long';
-              markers.push({
-                time: closest.time,
-                position: isLong ? 'belowBar' : 'aboveBar',
-                color: isLong ? '#00ff88' : '#ff2a5f',
-                shape: isLong ? 'arrowUp' : 'arrowDown',
-                text: (isLong ? 'LONG ' : 'SHORT ') + (tr.pnl >= 0 ? '+$' + tr.pnl : '-$' + Math.abs(tr.pnl))
+      statusEl.textContent = '⏳ Loading ' + journalSym + '...';
+      var candles = [];
+      var volumes = [];
+
+      try {
+        if (source === 'binance') {
+          var bRestUrl = ['https://', '://binance.com', '/api/v3/klines?symbol='].join('') + apiSym + '&interval=' + tf + '&limit=300';
+          var res = await fetch(bRestUrl);
+          var data = await res.json();
+          data.forEach(function(k) {
+            var t = Math.floor(k.at(0) / 1000);
+            var o = parseFloat(k.at(1)), h = parseFloat(k.at(2)), l = parseFloat(k.at(3)), c = parseFloat(k.at(4)), v = parseFloat(k.at(5));
+            candles.push({ time: t, open: o, high: h, low: l, close: c });
+            volumes.push({ time: t, value: v, color: c >= o ? 'rgba(0,255,136,0.22)' : 'rgba(255,42,95,0.22)' });
+          });
+
+          var wsUrl = ['wss://', '://binance.com', '/ws/'].join('') + apiSym.toLowerCase() + '@kline_' + tf;
+          p2pLiveSocket = new WebSocket(wsUrl);
+          p2pLiveSocket.onmessage = function(evt) {
+            var msg = JSON.parse(evt.data);
+            if (msg.k) {
+              p2pCandleSeries.update({
+                time: Math.floor(msg.k.t / 1000),
+                open: parseFloat(msg.k.o),
+                high: parseFloat(msg.k.h),
+                low: parseFloat(msg.k.l),
+                close: parseFloat(msg.k.c)
               });
             }
-          });
-          markers.sort(function(a, b) { return a.time - b.time; });
+          };
+          statusEl.textContent = '● LIVE STREAM (' + journalSym + ')';
+          statusEl.className = 'tag-g';
+        } else if (source === 'yahoo') {
+          var yRange = (tf === '1d') ? '1y' : '30d';
+          var yUrl = ['https://', '://yahoo.com', '/v8/finance/chart/'].join('') + apiSym + '?range=' + yRange + '&interval=' + tf;
+          var proxyUrl = ['https://', 'corsproxy.io', '/?'].join('') + encodeURIComponent(yUrl);
+          var yRes = await fetch(proxyUrl);
+          var yJson = await yRes.json();
+          var r = yJson.chart.result.at(0);
+          var q = r.indicators.quote.at(0);
+          for (var i = 0; i < r.timestamp.length; i++) {
+            if (q.open.at(i) == null || q.close.at(i) == null) continue;
+            var yt = r.timestamp.at(i);
+            candles.push({ time: yt, open: q.open.at(i), high: q.high.at(i), low: q.low.at(i), close: q.close.at(i) });
+            volumes.push({ time: yt, value: q.volume.at(i) || 100, color: q.close.at(i) >= q.open.at(i) ? 'rgba(0,255,136,0.22)' : 'rgba(255,42,95,0.22)' });
+          }
+          statusEl.textContent = '● NSE MARKET FEED (' + journalSym + ')';
+          statusEl.className = 'tag-g';
         }
-        p2pCandleSeries.setMarkers(markers);
-        p2pChartObj.timeScale().fitContent();
+
+        if (candles.length) {
+          p2pCandleSeries.setData(candles);
+          p2pVolSeries.setData(volumes);
+          p2pEma20Series.setData(calcEmaData(candles, 20));
+          p2pEma50Series.setData(calcEmaData(candles, 50));
+
+          var markers = [];
+          if (p2pShowMarkers && typeof trades !== 'undefined' && Array.isArray(trades)) {
+            trades.forEach(function(tr) {
+              if ((tr.sym || '').toUpperCase().indexOf(journalSym) !== -1 && tr.dat) {
+                var trSec = Math.floor(new Date(tr.dat + 'T12:00:00Z').getTime() / 1000);
+                var closest = candles.reduce(function(prev, curr) {
+                  return Math.abs(curr.time - trSec) < Math.abs(prev.time - trSec) ? curr : prev;
+                });
+                var isLong = (tr.side || '').toLowerCase() === 'long';
+                markers.push({
+                  time: closest.time,
+                  position: isLong ? 'belowBar' : 'aboveBar',
+                  color: isLong ? '#00ff88' : '#ff2a5f',
+                  shape: isLong ? 'arrowUp' : 'arrowDown',
+                  text: (isLong ? 'LONG ' : 'SHORT ') + (tr.pnl >= 0 ? '+$' + tr.pnl : '-$' + Math.abs(tr.pnl))
+                });
+              }
+            });
+            markers.sort(function(a, b) { return a.time - b.time; });
+          }
+          p2pCandleSeries.setMarkers(markers);
+          p2pChartObj.timeScale().fitContent();
+        }
+      } catch (err) {
+        statusEl.textContent = '⚠️ Feed Busy — Click Symbol to Retry';
+        statusEl.className = 'tag-r';
       }
-    } catch (err) {
-      statusEl.textContent = '⚠️ Feed Busy — Click Symbol to Retry';
-      statusEl.className = 'tag-r';
-    }
+    });
   }
 </script>
 
